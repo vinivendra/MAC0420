@@ -64,9 +64,9 @@ window.onload = function init()
         
         i = j + 1;
         
-        console.log(number1.toString());
-        console.log(number2.toString());
-        console.log(number3.toString());
+//        console.log(number1.toString());
+//        console.log(number2.toString());
+//        console.log(number3.toString());
         
         vertexList[k] = number1;
         k++;
@@ -78,7 +78,78 @@ window.onload = function init()
     
     
     
-    // Read each cube's face
+    
+    
+    
+    /* Read the faces */
+    var cubeVertices = new Array();
+    k = 0;
+    
+    // Skip 2 more lines
+    while (objectCode.charAt(i) != '\n') {
+        i++;
+    }
+    i++;
+    while (objectCode.charAt(i) != '\n') {
+        i++;
+    }
+    i++;
+    
+    // Read each face
+    while (objectCode.charAt(i) == 'f') {
+        i += 2;
+        var j;
+        
+        var number = new Array();
+        
+        for (j = i; objectCode.charAt(j) != ' '; j++);
+        number[0] = parseInt(objectCode.substr(i, j-1)) - 1;
+        
+        i = j + 1;
+        for (j = i; objectCode.charAt(j) != ' '; j++);
+        number[1] = parseInt(objectCode.substr(i, j-1)) - 1;
+        
+        i = j + 1;
+        for (j = i; objectCode.charAt(j) != ' '; j++);
+        number[2] = parseInt(objectCode.substr(i, j-1)) - 1;
+        
+        i = j + 1;
+        for (j = i; objectCode.charAt(j) != '\n'; j++);
+        number[3] = parseInt(objectCode.substr(i, j-1)) - 1;
+        
+        i = j + 1;
+        
+        
+//        console.log((number[0]+1).toString());
+//        console.log((number[1]+1).toString());
+//        console.log((number[2]+1).toString());
+//        console.log((number[3]+1).toString());
+        
+        
+        for (var l = 0; l < 3; l++)
+            for (var h = 0; h < 3; h++) {
+                cubeVertices[k] = vertexList[3*number[l] + h];
+                k++;
+            }
+        
+        for (var l = 0; l < 4; l++)
+            if (l == 1) continue;
+            for (var h = 0; h < 3; h++) {
+                cubeVertices[k] = vertexList[3*number[l] + h];
+                k++;
+            }
+        
+        cubeVertices[k] = vertexList[3*number];
+        k++;
+        cubeVertices[k] = vertexList[3*number1 + 1];
+        k++;
+        cubeVertices[k] = vertexList[3*number1 + 2];
+        k++;
+    }
+    
+    
+    
+    
     
     
     
@@ -119,16 +190,5 @@ function render() {
     window.requestAnimFrame(render);
 }
 
-
-
-
-function vertexNumber(vertexList, i) {
-    var vertex = new Array();
-    vertex[0] = vertexList[3*i];
-    vertex[1] = vertexList[3*i + 1];
-    vertex[2] = vertexList[3*i + 2];
-    
-    return vertex;
-}
 
 
