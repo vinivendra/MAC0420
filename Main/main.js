@@ -27,27 +27,58 @@ window.onload = function init()
     
     
     
-    var objectCode = "mtllib untitled.mtl\n\
-    o Cube\n\
-    v 1.000000 -1.000000 -1.000000\n\
-    v 1.000000 -1.000000 1.000000\n\
-    v -1.000000 -1.000000 1.000000\n\
-    v -1.000000 -1.000000 -1.000000\n\
-    v 1.000000 1.000000 -0.999999\n\
-    v 0.999999 1.000000 1.000001\n\
-    v -1.000000 1.000000 1.000000\n\
-    v -1.000000 1.000000 -1.000000\n\
-    usemtl Material\n\
-    s off\n\
-    f 1 2 3 4\n\
-    f 5 8 7 6\n\
-    f 1 5 6 2\n\
-    f 2 6 7 3\n\
-    f 3 7 8 4\n\
-    f 5 1 4 8\n";
-    console.log(objectCode);
+    var objectCode = "mtllib untitled.mtl\no Cube\nv 1.000000 -1.000000 -1.000000\nv 1.000000 -1.000000 1.000000\nv -1.000000 -1.000000 1.000000\nv -1.000000 -1.000000 -1.000000\nv 1.000000 1.000000 -0.999999\nv 0.999999 1.000000 1.000001\nv -1.000000 1.000000 1.000000\nv -1.000000 1.000000 -1.000000\nusemtl Material\ns off\nf 1 2 3 4\nf 5 8 7 6\nf 1 5 6 2\nf 2 6 7 3\nf 3 7 8 4\nf 5 1 4 8\n";
     
-//    var cubeVertices = new Array();
+    
+    /* Read the vertices */
+    var vertexList = new Array();
+    var k = 0;
+    var i = 0;
+    
+    // Skip the two first lines
+    while (objectCode.charAt(i) != '\n') {
+        i++;
+    }
+    i++;
+    while (objectCode.charAt(i) != '\n') {
+        i++;
+    }
+    i++;
+
+    console.log(objectCode.charAt(i));
+    
+    // Read each vertex
+    while (objectCode.charAt(i) == 'v') {
+        i += 2;
+        var j;
+        for (j = i; objectCode.charAt(j) != ' '; j++);
+        var number1 = parseFloat(objectCode.substr(i, j-1));
+
+        i = j + 1;
+        for (j = i; objectCode.charAt(j) != ' '; j++);
+        var number2 = parseFloat(objectCode.substr(i, j-1));
+        
+        i = j + 1;
+        for (j = i; objectCode.charAt(j) != '\n'; j++);
+        var number3 = parseFloat(objectCode.substr(i, j-1));
+        
+        i = j + 1;
+        
+        console.log(number1.toString());
+        console.log(number2.toString());
+        console.log(number3.toString());
+        
+        vertexList[k] = number1;
+        k++;
+        vertexList[k] = number2;
+        k++;
+        vertexList[k] = number3;
+        k++;
+    }
+    
+    
+    
+    // Read each cube's face
     
     
     
@@ -87,3 +118,17 @@ function render() {
 
     window.requestAnimFrame(render);
 }
+
+
+
+
+function vertexNumber(vertexList, i) {
+    var vertex = new Array();
+    vertex[0] = vertexList[3*i];
+    vertex[1] = vertexList[3*i + 1];
+    vertex[2] = vertexList[3*i + 2];
+    
+    return vertex;
+}
+
+
