@@ -10,7 +10,7 @@ var i = 0;
 
 //var NumTimesToSubdivide = 5;
 
-var objectCode = "mtllib untitled.mtl\no Cube\nv 1.000000 -1.000000 -1.000000\nv 1.000000 -1.000000 1.000000\nv -1.000000 -1.000000 1.000000\nv -1.000000 -1.000000 -1.000000\nv 1.000000 1.000000 -0.999999\nv 0.999999 1.000000 1.000001\nv -1.000000 1.000000 1.000000\nv -1.000000 1.000000 -1.000000\nusemtl Material\ns off\nf 1 2 3 4\nf 5 8 7 6\nf 1 5 6 2\nf 2 6 7 3\nf 3 7 8 4\nf 5 1 4 8\n";
+var objectCode = "# Blender v2.70 (sub 0) OBJ File: 'untitled.blend'\n# www.blender.org\nmtllib untitled.mtl\no Cube\nv 1.000000 -1.000000 -1.000000\nv 1.000000 -1.000000 1.000000\nv -1.000000 -1.000000 1.000000\nv -1.000000 -1.000000 -1.000000\nv 1.000000 1.000000 -0.999999\nv 0.999999 1.000000 1.000001\nv -1.000000 1.000000 1.000000\nv -1.000000 1.000000 -1.000000\nvn 0.471395 0.003497 -0.881915\nvn 0.128903 -0.961886 -0.241163\nvn 0.128902 -0.961883 -0.241175\nvn 0.147546 -0.949764 -0.276003\nusemtl Material\ns off\nf 1 2 3 4\nf 5 8 7 6\nf 1 5 6 2\nf 2 6 7 3\nf 3 7 8 4\nf 5 1 4 8\n";
 
 window.onload = function init()
 {
@@ -79,20 +79,18 @@ function readVertices() {
     /* Read the vertices */
     var vertexList = new Array();
 
-    // Skip the two first lines
-    while (objectCode.charAt(i) != '\n') {
+    // Skip the four first lines
+    for (var bla = 0; bla < 4; bla++) {
+        while (objectCode.charAt(i) != '\n') {
+            i++;
+        }
         i++;
     }
-    i++;
-    while (objectCode.charAt(i) != '\n') {
-        i++;
-    }
-    i++;
 
 
 
     // Read each vertex
-    while (objectCode.charAt(i) == 'v') {
+    while (objectCode.charAt(i) == 'v' && objectCode.charAt(i+1) != 'n') {
         i += 2;
         var j;
         for (j = i; objectCode.charAt(j) != ' '; j++);
@@ -129,6 +127,14 @@ function readVertices() {
 
 
 function readFaces() {
+    // Skip all the 'vn' lines
+    while (objectCode.charAt(i) == 'v') {
+        while (objectCode.charAt(i) != '\n') {
+            i++;
+        }
+        i++;
+    }
+    
     // Skip 2 more lines
     while (objectCode.charAt(i) != '\n') {
         i++;
