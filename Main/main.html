@@ -11,7 +11,10 @@ varying vec4 color;
 void
 main()
 {
-    color = vec4(vPosition, 1.0);
+//Brancas:
+//    color = vec4((vPosition.y + 2.0) / 4.0, (vPosition.y + 2.0) / 4.0, (vPosition.y + 2.0) / 4.0, 1.0);
+//Pretas:
+    color = vec4(0.4 * (vPosition.y + 2.0) / 4.0, 0.4 * (vPosition.y + 2.0) / 4.0, 0.4 * (vPosition.y + 2.0) / 4.0, 1.0);
     gl_Position = vec4(vPosition, 1.0);
 }
 
