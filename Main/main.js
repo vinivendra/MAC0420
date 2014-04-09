@@ -10,7 +10,9 @@ var i = 0;
 
 //var NumTimesToSubdivide = 5;
 
-var objectCode = "# Blender v2.70 (sub 0) OBJ File: 'untitled.blend'\n# www.blender.org\nmtllib untitled.mtl\no Cube\nv 1.000000 -1.000000 -1.000000\nv 1.000000 -1.000000 1.000000\nv -1.000000 -1.000000 1.000000\nv -1.000000 -1.000000 -1.000000\nv 1.000000 1.000000 -0.999999\nv 0.999999 1.000000 1.000001\nv -1.000000 1.000000 1.000000\nv -1.000000 1.000000 -1.000000\nvn 0.471395 0.003497 -0.881915\nvn 0.128903 -0.961886 -0.241163\nvn 0.128902 -0.961883 -0.241175\nvn 0.147546 -0.949764 -0.276003\nusemtl Material\ns off\nf 1 2 3 4\nf 5 8 7 6\nf 1 5 6 2\nf 2 6 7 3\nf 3 7 8 4\nf 5 1 4 8\n";
+var objectCode = "# Blender v2.70 (sub 0) OBJ File: 'untitled.blend'\n# www.blender.org\nmtllib untitled.mtl\no Cube\nv 1.000000 -1.000000 -1.000000\nv 1.000000 -1.000000 1.000000\nv -1.000000 -1.000000 1.000000\nv -1.000000 -1.000000 -1.000000\nv 1.000000 1.000000 -0.999999\nv 0.999999 1.000000 1.000001\nv -1.000000 1.000000 1.000000\nv -1.000000 1.000000 -1.000000\nvn 0.471395 0.003497 -0.881915\nvn 0.128903 -0.961886 -0.241163\nvn 0.128902 -0.961883 -0.241175\nvn 0.147546 -0.949764 -0.276003\nusemtl Material\ns off\nf 1//32 2//32 3//32\nf 5//32 8//32 7//32\nf 1//32 5//32 6//32\nf 2//32 6//32 7//32\nf 3//32 7//32 8//32\nf 5//32 1//32 4//32\n";
+
+//f 2058//3948 2211//3948 2212//3948
 
 window.onload = function init()
 {
@@ -152,22 +154,20 @@ function readFaces() {
 
         var number = [];
 
-        for (j = i; objectCode.charAt(j) != ' '; j++);
+        for (j = i; objectCode.charAt(j) != '/'; j++);
         number[0] = parseInt(objectCode.substr(i, j-1)) - 1;
-
-        i = j + 1;
-        for (j = i; objectCode.charAt(j) != ' '; j++);
+        for (i = j; objectCode.charAt(i) != ' '; i++);
+        i++;
+        
+        for (j = i; objectCode.charAt(j) != '/'; j++);
         number[1] = parseInt(objectCode.substr(i, j-1)) - 1;
-
-        i = j + 1;
-        for (j = i; objectCode.charAt(j) != ' '; j++);
+        for (i = j; objectCode.charAt(i) != ' '; i++);
+        i++;
+        
+        for (j = i; objectCode.charAt(j) != '/'; j++);
         number[2] = parseInt(objectCode.substr(i, j-1)) - 1;
-
-        i = j + 1;
-        for (j = i; objectCode.charAt(j) != '\n'; j++);
-        number[3] = parseInt(objectCode.substr(i, j-1)) - 1;
-
-        i = j + 1;
+        for (i = j; objectCode.charAt(i) != '\n'; i++);
+        i++;
 
 
 //        console.log((number[0]+1).toString());
@@ -179,9 +179,6 @@ function readFaces() {
         points.push(vertices[number[0]]);
         points.push(vertices[number[1]]);
         points.push(vertices[number[2]]);
-        points.push(vertices[number[0]]);
-        points.push(vertices[number[2]]);
-        points.push(vertices[number[3]]);
         
 //        console.log(vertices[number[0]].toString());
 //        console.log(vertices[number[1]].toString());
