@@ -7,7 +7,7 @@
 <script id="vertex-shader" type="x-shader/x-vertex">
 attribute vec3 vPosition;
 varying vec4 color;
-uniform mat4 rotation;
+uniform mat4 matrix;
 
 void
 main()
@@ -19,7 +19,7 @@ main()
 
     color = vec4(0.8 * (vPosition.y ) , 0.8 * (vPosition.y ) , 0.8 * (vPosition.y ) , 1.0);
     
-    gl_Position = rotation * vec4(vPosition, 1.0);
+    gl_Position = matrix * vec4(vPosition, 1.0);
 }
 
 
