@@ -134,6 +134,7 @@ function translate(x, y, z) {
                           ];
     
     this.translation = times(newTranslation, this.translation);
+    this.hasToUpdateMatrix = true;
 }
 
 
@@ -148,6 +149,7 @@ function scale(x) {
                           ];
     
     this.scaling = times(newScale, this.scaling);
+    this.hasToUpdateMatrix = true;
 }
 
 
@@ -260,6 +262,9 @@ function initObjects() {
                           translation: mat4(),
                           rotation: mat4(),
                           scaling: mat4(),
+                          matrix: matrix,
+                          hasToUpdateMatrix: false,
+                          
                           translate: translate,
                           scale: scale,
                           createMatrix: createMatrix
@@ -270,6 +275,9 @@ function initObjects() {
                           translation: mat4(),
                           rotation: mat4(),
                           scaling: mat4(),
+                          matrix: matrix,
+                          hasToUpdateMatrix: false,
+                          
                           translate: translate,
                           scale: scale,
                           createMatrix: createMatrix
@@ -380,7 +388,12 @@ function finalizeMatrix() {
 }
 
 function createMatrix() {
-    return times(matrix, times(times(this.rotation, this.scaling), this.translation));
+    if (this.hasToUpdateMatrix) {
+        this.matrix = times(times(this.rotation, this.scaling), this.translation);
+        this.hasToUpdateMatrix = false;
+    }
+    
+    return times(matrix, this.matrix);
 }
 
 
