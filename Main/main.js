@@ -14,6 +14,8 @@ var position = vec4(0.0, 0.0, 0.0, 1.0);
 
 var hasToUpdateMatrix = true;
 
+var teamLoc;
+
 /* Rotation */
 var matrixLoc;
 var rotationz;
@@ -98,7 +100,7 @@ window.onload = function init()
     gl.enableVertexAttribArray( vPosition );
     
     matrixLoc = gl.getUniformLocation(program, "matrix");
-    
+    teamLoc = gl.getUniformLocation(program, "team");
 
     
     rotateZ(0);
@@ -435,6 +437,7 @@ function render() {
     for (var i = 0; i < objects.length; i++) {
         for (var j = 0; j < objects[i].instances.length; j++) {
             gl.uniformMatrix4fv(matrixLoc, false, flatten(objects[i].instances[j].createMatrix()));
+            gl.uniform1i(teamLoc, objects[i].instances[j].color);
             
             gl.drawArrays( gl.TRIANGLES, objects[i].vertexStart, objects[i].vertexEnd );
         }

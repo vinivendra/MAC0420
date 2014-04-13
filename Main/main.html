@@ -8,16 +8,19 @@
 attribute vec3 vPosition;
 varying vec4 color;
 uniform mat4 matrix;
+uniform bool team;
 
 void
 main()
 {
 //Brancas:
-//    color = vec4((vPosition.y + 2.0) / 4.0, (vPosition.y + 2.0) / 4.0, (vPosition.y + 2.0) / 4.0, 1.0);
+//    color = vec4(1.0 - 0.3 * (vPosition.y + 2.0) / 4.0, 1.0 - 0.3 * (vPosition.y + 2.0) / 4.0, 1.0 - 0.3 * (vPosition.y + 2.0) / 4.0, 1.0);
 //Pretas:
 //    color = vec4(0.4 * (vPosition.y + 2.0) / 4.0, 0.4 * (vPosition.y + 2.0) / 4.0, 0.4 * (vPosition.y + 2.0) / 4.0, 1.0);
-
-    color = vec4(0.8 * (vPosition.y ) , 0.8 * (vPosition.y ) , 0.8 * (vPosition.y ) , 1.0);
+    if (team)
+        color = vec4(0.4 * (vPosition.y + 2.0) / 4.0, 0.4 * (vPosition.y + 2.0) / 4.0, 0.4 * (vPosition.y + 2.0) / 4.0, 1.0);
+    else
+        color = vec4(1.0 - 0.3 * (vPosition.y + 2.0) / 4.0, 1.0 - 0.3 * (vPosition.y + 2.0) / 4.0, 1.0 - 0.3 * (vPosition.y + 2.0) / 4.0, 1.0);
     
     gl_Position = matrix * vec4(vPosition, 1.0);
 }
