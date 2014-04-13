@@ -122,10 +122,7 @@ window.onload = function init()
 
 /* TRANSLATION */
 function translate(x, y, z) {
-    this.position[0] += x;
-    this.position[1] += y;
-    this.position[2] += z;
-    
+
     var newTranslation = [
                           vec4(  1,  0,  0,  x ),
                           vec4(  0,  1,  0,  y ),
@@ -258,7 +255,6 @@ function initObjects() {
     var bishop = {string: bishopVertices, vertexStart: 0, vertexEnd: 0, instances: []};
     bishop.instances.push({exists: true,
                           color: 0,
-                          position: vec4( 0.5,  0.5,  0.5, 1.0),
                           translation: mat4(),
                           rotation: mat4(),
                           scaling: mat4(),
@@ -271,7 +267,6 @@ function initObjects() {
                           });
     bishop.instances.push({exists: true,
                           color: 1,
-                          position: vec4(-0.5, -0.5, -0.5, 1.0),
                           translation: mat4(),
                           rotation: mat4(),
                           scaling: mat4(),
