@@ -149,140 +149,107 @@ window.onload = function init()
 
 
 
-/* TRANSLATION */
-function translate(x, y, z) {
-
-    var newTranslation = [
-                          vec4(  1,  0,  0,  x ),
-                          vec4(  0,  1,  0,  y ),
-                          vec4(  0,  0,  1,  z ),
-                          vec4(  0,  0,  0,  1 )
-                          ];
-    
-    this.translation = times(newTranslation, this.translation);
-    this.hasToUpdateMatrix = true;
-}
-
-
-/* SCALING */
-function scale(x) {
-    
-    var newScale = [
-                          vec4(  x,  0,  0,  0 ),
-                          vec4(  0,  x,  0,  0 ),
-                          vec4(  0,  0,  x,  0 ),
-                          vec4(  0,  0,  0,  1 )
-                          ];
-    
-    this.scaling = times(newScale, this.scaling);
-    this.hasToUpdateMatrix = true;
-}
-
-
-/* OBJECTS */
+/* INICIALIZAÇÃO DE OBJETOS */
+// Lê os vértices de cada peça e os armazena no vetor
 function readVertices(piece) {
-    /* Skip the first four lines:
+    /* Pula as quatro primeiras linhas:
      
      # Blender v2.70 (sub 0) OBJ File: ''
      # www.blender.org
      mtllib bispo.mtl
      o Line02
-    */
-    
-    if (piece.string.charAt(0) == '\0') {
-        console.log("Faltou copiar o código!");
-        exit(0);
-    }
+     */
     for (var bla = 0; bla < 4; bla++) {
         while (piece.string.charAt(i) != '\n') i++;
         i++;
     }
     
-    // Read each vertex
+    // Para cada linha começada com "v "
     while (piece.string.charAt(i) == 'v' && piece.string.charAt(i+1) != 'n') {
-        i += 2;                     // Skip "v "
-        var j;                      // Goes to the end of each number
-        var vertex = vec3();        // Vertex that will be added
+        i += 2;                     // Pula o "v "
+        var j;                      // j vai para o fim de cada número
+        var vertex = vec3();        // O novo vértice a ser adicionado
         
-        // Read the x coordinate
-        for (j = i; piece.string.charAt(j) != ' '; j++);          // Find where the number ends
-        vertex[0] = parseFloat(piece.string.substr(i, j-1)) / 2;  // Add the coordinate to the new vertex
+        // Leitura da coordenada x
+        for (j = i; piece.string.charAt(j) != ' '; j++);            // Acha o fim do número
+        vertex[0] = parseFloat(piece.string.substr(i, j-1)) / 2;    // Adiciona a coordenada ao novo vértice
         
-        // Read the y coordinate
-        i = j + 1;                                              // Skip to the next number
+        // Leitura da coordenada y
+        i = j + 1;                                                  // Pula para o número seguinte
         for (j = i; piece.string.charAt(j) != ' '; j++);
         vertex[1] = parseFloat(piece.string.substr(i, j-1)) / 2;
         
-        // Read the z coordinate
+        // Leitura da coordenada z
         i = j + 1;
         for (j = i; piece.string.charAt(j) != '\n'; j++);
         vertex[2] = parseFloat(piece.string.substr(i, j-1)) / 2;
         
-        i = j + 1;
+        i = j + 1;      // Vai para a próxima linha
         
-        // Add the new vertex to the list
+        // Coloca o novo vértice na lista
         vertices.push( vertex );
     }
-    
 }
 
+// Lê as faces, ou seja, os grupos de vértices correspondentes
+// a faces e coloca esses grupos em um novo vetor
 function readFaces(piece) {
-    // Skip all the 'vn' lines
+    // Pula todas as linhas "vn ", que não vai ser usadas por enquanto
     while (piece.string.charAt(i) == 'v') {
         while (piece.string.charAt(i) != '\n') i++;
         i++;
     }
     
-    /* Skip 2 more lines:
+    /* Pula mais duas linhas:
      
      usemtl wire_255255255
      s off
-    */
-    while (piece.string.charAt(i) != '\n') {
-        i++;
-    }
+     */
+    while (piece.string.charAt(i) != '\n') i++;
     i++;
-    while (piece.string.charAt(i) != '\n') {
-        i++;
-    }
+    while (piece.string.charAt(i) != '\n') i++;
     i++;
     
-    // Read each face
+    // Para cada face
     while (piece.string.charAt(i) == 'f') {
-        i += 2;                 // Skip the "f "
-        var j;                  // Goes to the end of each number
+        i += 2;                 // Pula o "f "
+        var j;                  // Vai para o fim de cada número
         
-        var number = [];        // Triangle to be added (indexes of three vertices in the vertex list)
+        var number = [];        // Triângulo a ser adicionado (índice dos 3 vértices na lista)
         
-        // First vertex
-        for (j = i; piece.string.charAt(j) != '/'; j++);          // Read up to the first '/'
-        number[0] = parseInt(piece.string.substr(i, j-1)) - 1;    // Add the number
-        for (i = j; piece.string.charAt(i) != ' '; i++);          // Skip the rest
+        // Primeiro vértice
+        for (j = i; piece.string.charAt(j) != '/'; j++);          // Lê até a primeira '/'
+        number[0] = parseInt(piece.string.substr(i, j-1)) - 1;    // Adiciona o número
+        for (i = j; piece.string.charAt(i) != ' '; i++);          // Pula o resto, que por
+                                                                  // enquanto não vamos usar
         i++;
         
-        // Second vertex
+        // Segundo vértice
         for (j = i; piece.string.charAt(j) != '/'; j++);
         number[1] = parseInt(piece.string.substr(i, j-1)) - 1;
         for (i = j; piece.string.charAt(i) != ' '; i++);
         i++;
         
-        // Third vertex
+        // Terceiro vértice
         for (j = i; piece.string.charAt(j) != '/'; j++);
         number[2] = parseInt(piece.string.substr(i, j-1)) - 1;
         for (i = j; piece.string.charAt(i) != '\n'; i++);
         i++;
         
-        // Add the vertices to the points array
+        // Adiciona os vértices, em ordem, ao vetor de "pontos"
         for (var k = 0; k < 3; k++)
             points.push(vertices[number[k]]);
     }
     
+    // Configura a peça para saber onde é
+    // o começo e o final dos seus vértices na lista
     piece.vertexStart = previousPointsSize;
     previousPointsSize = points.length;
     piece.vertexEnd = points.length;
-    
 }
 
+// Inicializa as peças, com todas as informações necessárias
+// TEMPORARIAMENTE ASSIM:
 function initObjects() {
     var bishop = {string: bishopVertices, vertexStart: 0, vertexEnd: 0, instances: []};
     bishop.instances.push({exists: true,
@@ -320,8 +287,75 @@ function initObjects() {
 
 
 
-/* ROTATION */
+
+/* AUXILIARES */
+// Multiplicação simples e não muito rápida de duas matrizes 4x4
+function times(mat1, mat2) {
+    var mat = mat4();
+    
+    for(var i = 0; i < 4; i++) {
+        for(var j = 0; j < 4; j++) {
+            mat[i][j] = mat1[i][0]*mat2[0][j] + mat1[i][1]*mat2[1][j] + mat1[i][2]*mat2[2][j] + mat1[i][3]*mat2[3][j];
+        }
+    }
+    
+    return mat;
+}
+
+
+
+
+/* MATRIZES DE ORIENTAÇÃO DE OBJETOS */
+// Translação
+function translate(x, y, z) {
+    // Cria a matriz correspondente ao movimento do vetor (x, y, z)
+    var newTranslation = [
+                          vec4(  1,  0,  0,  x ),
+                          vec4(  0,  1,  0,  y ),
+                          vec4(  0,  0,  1,  z ),
+                          vec4(  0,  0,  0,  1 )
+                          ];
+    
+    // Multiplica ela pela de transformação já existente
+    this.translation = times(newTranslation, this.translation);
+    // Seta a flag para recriarmos a matriz deste objeto
+    this.hasToUpdateMatrix = true;
+}
+
+// Escala
+function scale(x) {
+    // Análogo ao método acima
+    var newScale = [
+                          vec4(  x,  0,  0,  0 ),
+                          vec4(  0,  x,  0,  0 ),
+                          vec4(  0,  0,  x,  0 ),
+                          vec4(  0,  0,  0,  1 )
+                          ];
+    
+    this.scaling = times(newScale, this.scaling);
+    this.hasToUpdateMatrix = true;
+}
+
+// Junta escala, translação e rotação dos objetos
+function createMatrix() {
+    if (this.hasToUpdateMatrix) {
+        this.matrix = times(times(this.rotation, this.scaling), this.translation);
+        this.hasToUpdateMatrix = false;
+    }
+    
+    // Multplica pela de projeção e rnetorna uma matriz
+    // pronta para ser mandada para o vertex shader
+    return times(matrix, this.matrix);
+}
+
+
+
+
+/* MATRIZES DE ORIENTAÇÃO DA CENA */
+/* Rotação */
 function rotateZ(a) {
+    // Nós mantemos o ângulo (no eixo Z) atual da cena na variável psi.
+    // Basta aumentá-lo e recriar a matriz.
     psi += a;
     var c = Math.cos(psi);
     var s = Math.sin(psi);
@@ -367,6 +401,9 @@ function rotateY(a) {
 }
 
 function translateToOrigin() {
+    // Retorna a matriz de translação para a origem,
+    // baseada na posição atual da cena, para podermos
+    // girar a cena sobre um eixo central
     return newT = [
                 vec4(  1,  0,  0,  position[0] ),
                 vec4(  0,  1,  0,  position[1] ),
@@ -376,6 +413,7 @@ function translateToOrigin() {
 }
 
 function translateFromOrigin() {
+    // Idem, para a volta da translação
     return newT = [
                    vec4(  1,  0,  0,  -position[0] ),
                    vec4(  0,  1,  0,  -position[1] ),
@@ -385,6 +423,7 @@ function translateFromOrigin() {
 }
 
 function finalizeRotation() {
+    // Junta as cinco matrizes anteriores para criar a matriz de projeção que queremos
     if (hasToUpdateRotation) {
         rotation = times(times(translateFromOrigin(), times(rotationy, times(rotationx, rotationz))), translateToOrigin());
         
@@ -393,20 +432,8 @@ function finalizeRotation() {
     }
 }
 
-function times(mat1, mat2) {
-    var mat = mat4();
-    
-    for(var i = 0; i < 4; i++) {
-        for(var j = 0; j < 4; j++) {
-            mat[i][j] = mat1[i][0]*mat2[0][j] + mat1[i][1]*mat2[1][j] + mat1[i][2]*mat2[2][j] + mat1[i][3]*mat2[3][j];
-        }
-    }
-    
-    return mat;
-}
-
-
-/* MATRIX */
+// Junta a translação (para a cena estar no lugar
+// certo da tela) com a rotação feita pelo usuário
 function finalizeMatrix() {
     if (hasToUpdateMatrix) {
         matrix = times(translation, rotation);
@@ -414,42 +441,43 @@ function finalizeMatrix() {
     }
 }
 
-function createMatrix() {
-    if (this.hasToUpdateMatrix) {
-        this.matrix = times(times(this.rotation, this.scaling), this.translation);
-        this.hasToUpdateMatrix = false;
-    }
-    
-    return times(matrix, this.matrix);
-}
+
 
 
 /* CALLBACKS */
 
 function handleMouseDown(event) {
+    // Seta a flag dizendo para outras funções que o botão
+    // está apertado
     mouseDown = true;
+    // E seta a localização anterior do mouse,
+    // para efeitos de comparação com a atual
     lastMouseX = event.clientX;
     lastMouseY = event.clientY;
 }
 
 function handleMouseUp(event) {
+    // Reseta a flag
     mouseDown = false;
 }
 
 function handleMouseMove(event) {
-    if (!mouseDown) {
-        return;
-    }
+    // Só vamos rodar se o botão estiver apertado
+    if (!mouseDown) return;
     
+    // Pega as novas coordenadas
     var newX = event.clientX;
     var newY = event.clientY;
     
+    // Calcula a distância percorrida
     var deltaX = newX - lastMouseX;
     var deltaY = newY - lastMouseY;
     
+    // Roda a cena de acordo
     rotateY(-deltaX/30);
     rotateX(-deltaY/30);
     
+    // Atualiza a posição "anterior" do mouse
     lastMouseX = newX
     lastMouseY = newY;
 }
@@ -458,21 +486,29 @@ function handleMouseMove(event) {
 /* RENDERING */
 function render() {
     
+    // Limpa a tela
     gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     
+    // Deixa a matriz de projeção pronta para ser aplicada
     finalizeRotation();
     finalizeMatrix();
     
     
+    // Para cada tipo de peça
     for (var i = 0; i < objects.length; i++) {
+        // e para cada peça desse tipo
         for (var j = 0; j < objects[i].instances.length; j++) {
+            // Manda para o shader a matriz a ser aplicada (projeção x model-view)
             gl.uniformMatrix4fv(matrixLoc, false, flatten(objects[i].instances[j].createMatrix()));
+            // Manda também a cor da peça, para podermos passar a cor certa para o fragment shader
             gl.uniform1i(teamLoc, objects[i].instances[j].color);
             
+            // Desenha a peça atual
             gl.drawArrays( gl.TRIANGLES, objects[i].vertexStart, objects[i].vertexEnd );
         }
     }
     
+    // Já pede que um novo frame seja renderizado
     requestAnimFrame(render);
 }
 
