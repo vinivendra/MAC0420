@@ -252,57 +252,48 @@ function readFaces(piece) {
 // TEMPORARIAMENTE ASSIM:
 function initObjects() {
     var bishop = {string: bishopVertices, vertexStart: 0, vertexEnd: 0, instances: []};
-    bishop.instances.push({exists: true,
-                          color: 0,
-                          position: vec3(),
-                          scale: vec3( 1.0, 1.0, 1.0 ),
-                          translation: mat4(),
-                          rotation: mat4(),
-                          scaling: mat4(),
-                          matrix: matrix,
-                          hasToUpdateMatrix: false,
-                          
-                          translate: translate,
-                          rescale: rescale,
-                          createMatrix: createMatrix
-                          });
-    bishop.instances.push({exists: true,
-                          color: 1,
-                          position: vec3(),
-                          scale: vec3( -1.0, 1.0, 1.0 ),
-                          translation: mat4(),
-                          rotation: mat4(),
-                          scaling: mat4(),
-                          matrix: matrix,
-                          hasToUpdateMatrix: false,
-                          
-                          translate: translate,
-                          rescale: rescale,
-                          createMatrix: createMatrix
-                          });
-    bishop.instances.push({exists: true,
-                          color: 1,
-                          position: vec3(),
-                          scale: vec3( -1.0, 1.0, 1.0 ),
-                          translation: mat4(),
-                          rotation: mat4(),
-                          scaling: mat4(),
-                          matrix: matrix,
-                          hasToUpdateMatrix: false,
-                          
-                          translate: translate,
-                          rescale: rescale,
-                          createMatrix: createMatrix
-                          });
     
-    bishop.instances[0].translate(0.35, 0, 0);
-    bishop.instances[1].translate(0, 0, 0);
-    bishop.instances[2].translate(0, 0, 0.35);
-    bishop.instances[0].rescale(0.3, 0.3, 0.3);
-    bishop.instances[1].rescale(0.3, 0.3, 0.3);
-    bishop.instances[2].rescale(0.3, 0.3, 0.3);
+    for (var i = 0; i < 8; i++) {
+        for (var j = 0; j < 8; j++) {
+            bishop.instances.push(piece(i%2, i, j));
+        }
+    }
     
     objects.push(bishop);
+}
+
+
+// Cria uma nova peça no time TEAM e na posição (X, Y) (medida em casas) do tabuleiro
+function piece (team, x, y) {
+    // Acha a direção para a qual a peça está olhando
+    var direction;
+    if (team) direction = -1.0;
+    else direction = 1.0;
+    
+    // Tamanho padrão das peças
+    var size = 0.5;
+    
+    // Cria a peça
+    var piece = ({exists: true,
+                 color: team,
+                 position: vec3(-0.18, 0.0, 0.0),
+                 scale: vec3( direction, 1.0, 1.0 ),
+                 translation: mat4(),
+                 rotation: mat4(),
+                 scaling: mat4(),
+                 matrix: matrix,
+                 hasToUpdateMatrix: false,
+                 
+                 translate: translate,
+                 rescale: rescale,
+                 createMatrix: createMatrix
+                 });
+    
+    // Translada ela para o lugar certo
+    piece.translate(0.35 * (-3.5 + x), 0.0, 0.35 * (-3.5 + y));
+    piece.rescale(size, size, size);
+    
+    return piece;
 }
 
 
