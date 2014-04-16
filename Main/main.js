@@ -269,7 +269,21 @@ function initObjects() {
     bishop.instances.push({exists: true,
                           color: 1,
                           position: vec3(),
-                          scale: vec3( 1.0, 1.0, 1.0 ),
+                          scale: vec3( -1.0, 1.0, 1.0 ),
+                          translation: mat4(),
+                          rotation: mat4(),
+                          scaling: mat4(),
+                          matrix: matrix,
+                          hasToUpdateMatrix: false,
+                          
+                          translate: translate,
+                          rescale: rescale,
+                          createMatrix: createMatrix
+                          });
+    bishop.instances.push({exists: true,
+                          color: 1,
+                          position: vec3(),
+                          scale: vec3( -1.0, 1.0, 1.0 ),
                           translation: mat4(),
                           rotation: mat4(),
                           scaling: mat4(),
@@ -283,8 +297,10 @@ function initObjects() {
     
     bishop.instances[0].translate(0.35, 0, 0);
     bishop.instances[1].translate(0, 0, 0);
+    bishop.instances[2].translate(0, 0, 0.35);
     bishop.instances[0].rescale(0.3, 0.3, 0.3);
-    bishop.instances[1].rescale(-0.3, 0.3, 0.3);
+    bishop.instances[1].rescale(0.3, 0.3, 0.3);
+    bishop.instances[2].rescale(0.3, 0.3, 0.3);
     
     objects.push(bishop);
 }
@@ -508,13 +524,16 @@ function render() {
     for (var i = 0; i < objects.length; i++) {
         // e para cada peça desse tipo
         for (var j = 0; j < objects[i].instances.length; j++) {
-            // Manda para o shader a matriz a ser aplicada (projeção x model-view)
-            gl.uniformMatrix4fv(matrixLoc, false, flatten(objects[i].instances[j].createMatrix()));
-            // Manda também a cor da peça, para podermos passar a cor certa para o fragment shader
-            gl.uniform1i(teamLoc, objects[i].instances[j].color);
-            
-            // Desenha a peça atual
-            gl.drawArrays( gl.TRIANGLES, objects[i].vertexStart, objects[i].vertexEnd );
+            // Se a peça ainda não foi comida
+            if (objects[i].instances[j].exists) {
+                // Manda para o shader a matriz a ser aplicada (projeção x model-view)
+                gl.uniformMatrix4fv(matrixLoc, false, flatten(objects[i].instances[j].createMatrix()));
+                // Manda também a cor da peça, para podermos passar a cor certa para o fragment shader
+                gl.uniform1i(teamLoc, objects[i].instances[j].color);
+                
+                // Desenha a peça atual
+                gl.drawArrays( gl.TRIANGLES, objects[i].vertexStart, objects[i].vertexEnd );
+            }
         }
     }
     
