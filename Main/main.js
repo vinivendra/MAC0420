@@ -3,6 +3,7 @@
 var canvas;
 var gl;
 
+// Tamanho da tela
 var screenWidth;
 var screenHeight;
 
@@ -34,6 +35,7 @@ var rotationy;              // Idem, para Y
 
 var oldRotation = mat4();
 var newRotation = mat4();
+var lookat = mat4();
 var eye = vec3();
 var at = vec3();
 var up = vec3();
@@ -326,7 +328,7 @@ function piece (team, x, y) {
                  
                  translate: translate,
                  rescale: rescale,
-                 createMatrix: createMatrix
+                 getMatrix: getMatrix
                  });
     
     // Translada ela para o lugar certo
@@ -354,28 +356,26 @@ function times(mat1, mat2) {
 }
 
 // Norma
-function norm(p) {
-    //console.log("norm = (", p[0], p[1], p[2], ") = ",p[0]*p[0] + p[1]*p[1] + p[2]*p[2]);
+// 3D
+function norm3(p) {
     return Math.sqrt(p[0]*p[0] + p[1]*p[1] + p[2]*p[2]);
 }
-
+// 2D
 function norm2(p) {
     return Math.sqrt(p[0]*p[0] + p[1]*p[1]);
 }
 
-// Produto vetorial
+// Produto vetorial 3D
 function vcross(p, v) {
-    var c = vec3(p[0] * v[1] - p[1] * v[0], - p[0] * v[2] + p[2] * v[0], p[1] * v[2] - p[2] * v[1]);
-    return c;
+    return vec3(p[0] * v[1] - p[1] * v[0], - p[0] * v[2] + p[2] * v[0], p[1] * v[2] - p[2] * v[1]);
 }
 
-// Produto interno
+// Produto interno 3D
 function vdot(p, v) {
-    //console.log("dot(", p[0] * v[0] + p[1] * v[1] + p[2] * v[2], ")");
     return p[0] * v[0] + p[1] * v[1] + p[2] * v[2];
 }
 
-// Radianos e graus
+// Radianos <=> graus
 function radians (a) {
     return a * Math.PI / 180.0;
 }
@@ -383,28 +383,26 @@ function degrees (a) {
     return a * 180.0 / Math.PI;
 }
 
-
-// Ângulo
+// Ângulo entre dois vetores 3D
+// arccos(p.q/(|p|*|q|))
 function angle(p, q) {
-    var a = norm(p);
-    var b = norm(q);
+    var a = norm3(p);
+    var b = norm3(q);
     var c = vdot(p, q);
-    
-    //console.log("===", a, b, c, c/(a*b), degrees(c/(a*b)));
     
     return Math.acos(c/(a*b));
 }
 
 // "Projeção" de um ponto (x,z) para um (x,y,z) na esfera unitária
+// (Mousepad para Trackball)
 function getY(p) {
-    var s = Math.sqrt(1 - p[0]*p[0] - p[1]*p[1]);
-    
-    return s;
+    return Math.sqrt(1 - norm2(p));
 }
 
 
 // Multiplica uma matriz por um vetor
-function timesMV(m, v) {
+// 4D
+function timesMV4(m, v) {
     var r = [0.0, 0.0, 0.0, 0.0];
     var x = 0;
     var k = 0;
@@ -418,22 +416,19 @@ function timesMV(m, v) {
         x = 0;
     }
     
-    
     return r;
 }
 
+// 3D
 function timesMV3(m, v) {
     var r = [0.0, 0.0, 0.0];
     var x = 0;
     var k = 0;
     
-    //console.log("{", v[0], v[1], v[2], "}");
-    
     for (var i = 0; i < 3; i++) {
         for (var j = 0; j < 3; j++) {
             x += m[i][j] * v[j];
         }
-    //console.log(m[i][0], m[i][1], m[i][2]);
         r[k] = x;
         k++;
         x = 0;
@@ -443,11 +438,14 @@ function timesMV3(m, v) {
 }
 
 
-// Rotação de quatérnio
+// Rotação de quatérnios
+// Rodar o ponto q, t radianos ao redor de um vetor v
+// q é 4D, v é 3D
 function quatRot(q, v, t) {
     var c = Math.cos(t/2);
     var s = Math.sin(t/2);
     
+    // p pega só as 3 primeiras coordenadas de q, que é 4D.
     var p = vec3(q[1], q[2], q[3]);
     var crossVP = vcross(p, v);
     
@@ -459,62 +457,59 @@ function quatRot(q, v, t) {
     return p1 + p2 + p3 + p4;
 }
 
-// Devolve a matriz correspondente à rotação do (0, 1, 0) para um outro vetor,
-// o (x,y,z) na esfera unitária correspondente ao v = (x,z) dado
+// Devolve a matriz correspondente à rotação do p=(0, 1, 0) para um outro vetor,
+// o q=(x,y,z) na esfera unitária correspondente ao v = (x,z) dado.
 function RotTrackball(v) {
-    // Cria o p, acha o q na esfera
+    // Matriz que vamos retornar
+    var m = mat4();
+    
+    // Cria o p
     var p = vec3(0.0, 1.0, 0.0);
+    
+    // Acha o q na esfera
     v = vec2(v[0]/(screenWidth*2), v[1]/(screenHeight*2));
     var q = vec3(v[0], getY(v), v[1]);
+    
     
     
     // Calcula o vetor pelo qual rodar e o ângulo de rotação sobre ele
     var c = vcross(p, q);
     
-    //console.log("Angle p & q");
     var a = angle(p, q);
     
     
-    // Normaliza o vetor
-    //console.log("Norm of c");
-    var n = norm(c);
+    // Calcula a norma do vetor resultante
+    var n = norm3(c);
+    
+    // Se a norma for 0 é porque a diferença entre p e q é pequena
+    // demais. Por isso, e para não dividirmos algo por 0, ignoramos
+    // essa rotação.
     if (n != 0) {
+        // Normaliza o vetor
         c = vec4(c[0]/n, c[1]/n, c[2]/n, 0.0);
         
+        // Por causa do jeito como criamos p, este vetor está
+        // no plano y = 0. Queremos rodá-lo até o eixo z. Para isso,
+        // Consideramos o ângulo entre c e o eixo z.
         
-        //    // Calcula a projeção do vetor no plano x=0
-        //    var dx = Math.sqrt(c[0] * c[0] + c[1] * c[1]);
-        //
-        //    // Já podemos ter a rotação em x
-        //    var Rx = [vec4(1.0,     0.0,      0.0, 0.0),
-        //              vec4(0.0, c[2]/dx, -c[1]/dx, 0.0),
-        //              vec4(0.0, c[1]/dx,  c[2]/dx, 0.0),
-        //              vec4(0.0,     0.0,      0.0, 1.0) ];
-        //
-        //    var Rmx = [vec4(1.0,      0.0,     0.0, 0.0),
-        //               vec4(0.0,  c[2]/dx, c[1]/dx, 0.0),
-        //               vec4(0.0, -c[1]/dx, c[2]/dx, 0.0),
-        //               vec4(0.0,      0.0,     0.0, 1.0) ];
-        //
-        //    // Roda em x para poder achar a rotação em y
-        //    c = timesMV(Rx, c);
-        
-        // Acha a próxima projeção
-        dy = c[2];
+        // A componente x do vetor vai ser o seno do ângulo
+        // entre c e o eixo z. A componente z vai ser o cosseno.
         
         // Calcula a rotação em y
-        var Ry = [vec4(    dy, 0.0, c[0], 0.0),
-                  vec4(   0.0, 1.0,  0.0, 0.0),
-                  vec4( -c[0], 0.0,   dy, 0.0),
-                  vec4(   0.0, 0.0,  0.0, 1.0) ];
+        var Ry  = [vec4(  c[2],   0.0,  c[0],   0.0),
+                   vec4(   0.0,   1.0,   0.0,   0.0),
+                   vec4( -c[0],   0.0,  c[2],   0.0),
+                   vec4(   0.0,   0.0,   0.0,   1.0) ];
         
-        var Rmy = [vec4(   dy, 0.0, -c[0], 0.0),
-                   vec4(  0.0, 1.0,   0.0, 0.0),
-                   vec4( c[0], 0.0,    dy, 0.0),
-                   vec4(  0.0, 0.0,   0.0, 1.0) ];
+        // E a rotação de volta, com o ângulo negativo
+        var Rmy = [vec4(  c[2],   0.0, -c[0],   0.0),
+                   vec4(   0.0,   1.0,   0.0,   0.0),
+                   vec4(  c[0],   0.0,  c[2],   0.0),
+                   vec4(   0.0,   0.0,   0.0,   1.0) ];
         
         // Calcula a rotação em z
-        
+        // a é o ângulo entre p e q, o ângulo em que queremos
+        // rodar cena
         var cos = Math.cos(a);
         var sin = Math.sin(a);
         
@@ -523,18 +518,14 @@ function RotTrackball(v) {
                   vec4( 0.0,  0.0, 1.0, 0.0),
                   vec4( 0.0,  0.0, 0.0, 1.0) ];
         
-        //console.log(":::", a, n, cos, sin, dy);
-        
         // Calcula a rotação final
-        //    var m1 = times( Ry, times(Rx));
-        var m2 = times(Rz, Ry);
-        var m3 = times(Rmy, m2);
-        //    var m = times(Rmx, m3);
+        // R = R(-y)R(z)R(y)
+        var m = times(Rmy, times(Rz, Ry));
     }
-    else {
-        var m3 = mat4();
-    }
-    return m3;
+    // Se a norma for 0, vamos usar a matriz identidade criada na
+    // declaração de m, que equivale a uma rotação por 0 graus.
+    
+    return m;
 }
 
 
@@ -580,7 +571,7 @@ function rescale(x, y, z) {
 }
 
 // Junta escala, translação e rotação dos objetos
-function createMatrix() {
+function getMatrix() {
     if (this.hasToUpdateMatrix) {
         this.matrix = times(times(this.rotation, this.scaling), this.translation);
         this.hasToUpdateMatrix = false;
@@ -596,97 +587,17 @@ function createMatrix() {
 
 
 /* MATRIZES DE ORIENTAÇÃO DA CENA */
-/* Rotação */
-function rotateZ(a) {
-    // Nós mantemos o ângulo (no eixo Z) atual da cena na variável psi.
-    // Basta aumentá-lo e recriar a matriz.
-    psi += a;
-    var c = Math.cos(psi);
-    var s = Math.sin(psi);
-    
-    rotationz = [
-                 vec4(  c, -s,  0,  0 ),
-                 vec4(  s,  c,  0,  0 ),
-                 vec4(  0,  0,  1,  0 ),
-                 vec4(  0,  0,  0,  1 )
-                 ];
-    
-    hasToUpdateRotation = true;
-}
-
-function rotateX(a) {
-    theta += a;
-    var c = Math.cos(theta);
-    var s = Math.sin(theta);
-    
-    rotationx = [
-                 vec4(  1,  0,  0,  0 ),
-                 vec4(  0,  c, -s,  0 ),
-                 vec4(  0,  s,  c,  0 ),
-                 vec4(  0,  0,  0,  1 )
-                 ];
-    
-    hasToUpdateRotation = true;
-}
-
-function rotateY(a) {
-    phi += a;
-    var c = Math.cos(phi);
-    var s = Math.sin(phi);
-    
-    rotationy = [
-                 vec4(  c,  0,  s,  0 ),
-                 vec4(  0,  1,  0,  0 ),
-                 vec4( -s,  0,  c,  0 ),
-                 vec4(  0,  0,  0,  1 )
-                 ];
-    
-    hasToUpdateRotation = true;
-}
-
-function translateToOrigin() {
-    // Retorna a matriz de translação para a origem,
-    // baseada na posição atual da cena, para podermos
-    // girar a cena sobre um eixo central
-    return newT = [
-                vec4(  1,  0,  0,  position[0] ),
-                vec4(  0,  1,  0,  position[1] ),
-                vec4(  0,  0,  1,  position[2] ),
-                vec4(  0,  0,  0,  1 )
-                ];
-}
-
-function translateFromOrigin() {
-    // Idem, para a volta da translação
-    return newT = [
-                   vec4(  1,  0,  0,  -position[0] ),
-                   vec4(  0,  1,  0,  -position[1] ),
-                   vec4(  0,  0,  1,  -position[2] ),
-                   vec4(  0,  0,  0,  1 )
-                   ];
-}
 
 function finalizeRotation() {
-    // Junta as cinco matrizes anteriores para criar a matriz de projeção que queremos
+    // Roda o eye e o up do LookAt
     if (hasToUpdateRotation) {
-//        rotation = times(times(translateFromOrigin(), times(rotationy, times(rotationx, rotationz))), translateToOrigin());
-        oldRotation = times(newRotation, oldRotation);
         eye = timesMV3(newRotation, eye);
         up = timesMV3(newRotation, up);
+        newRotation = mat4();
         
-//        rotation = times(times(translateFromOrigin(), oldRotation, translateToOrigin()));
+        lookat = lookAt(eye, at, up);
         
         hasToUpdateRotation = false;
-        hasToUpdateMatrix = true;
-    }
-}
-
-// Junta a translação (para a cena estar no lugar
-// certo da tela) com a rotação feita pelo usuário
-function finalizeMatrix() {
-    if (hasToUpdateMatrix) {
-        matrix = times(proj, times(translation, rotation));
-        hasToUpdateMatrix = false;
     }
 }
 
@@ -746,7 +657,6 @@ function render() {
     
     // Deixa a matriz de projeção pronta para ser aplicada
     finalizeRotation();
-    finalizeMatrix();
     
     
     var projec = ortho(-2.0, 2.0, -2.0, 2.0, -0.1, -4.1);
@@ -760,7 +670,7 @@ function render() {
             // Se a peça ainda não foi comida
             if (objects[i].instances[j].exists) {
                 // Manda para o shader a matriz a ser aplicada (projeção x model-view)
-                gl.uniformMatrix4fv(matrixLoc, false, flatten(times(projec, times(lookAt(eye, at, up), objects[i].instances[j].createMatrix()))));
+                gl.uniformMatrix4fv(matrixLoc, false, flatten(times(projec, times(lookat, objects[i].instances[j].getMatrix()))));
                 // Manda também a cor da peça, para podermos passar a cor certa para o fragment shader
                 gl.uniform1i(teamLoc, objects[i].instances[j].color);
                 
