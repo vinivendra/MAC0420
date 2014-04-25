@@ -8,6 +8,9 @@ var screenWidth;
 var screenHeight;
 
 
+
+
+
 // ===================================================================================================
 /* Vértices para todas as peças */
 var vertices = [];          // Vértices de cada peça
@@ -19,34 +22,30 @@ var previousPointsSize = 0; // Tamanho acumulativo do vetor de vértices,
 var i = 0;
 
 
-// Perspectiva
-var proj = mat4();
+// Vetor com as informações sobre cada peça
+var objects = [];
 
-/* Variáveis de projeção */
-var matrix = mat4();        // Matrix de projeção
 
-var translation = mat4();   // Matriz de translação
-var position = vec4(0.0, 0.0, 0.0, 1.0);    // Posição inicial da cena
 
-var rotation = mat4();      // Matriz componente de rotação da projeção, composta por:
-var rotationz;              // Matriz referente à rotação da cena no eixo Z
-var rotationx;              // Idem, para X
-var rotationy;              // Idem, para Y
 
-var oldRotation = mat4();
-var newRotation = mat4();
-var lookat = mat4();
+
+
+// ===================================================================================================
+/* Variáveis de view */
+// Matriz para rodar o eye e o up
+var rotation = mat4();
+
+// Variáveis usadas no lookat
 var eye = vec3();
 var at = vec3();
 var up = vec3();
-
-//var psi = 0;                // Ângulos referentes às três matrizes acima
-//var theta = 0;              //
-//var phi = 0;                //
+var lookat = mat4();
 
 var hasToUpdateRotation = true;     // Flag para saber se é necessário
-                                    // recalcular a componente de rotação da projeção;
-var hasToUpdateMatrix = true;       // Idem, para a matrix final de projeção
+                                    // recalcular a componente de rotação da lookat;
+
+
+
 
 
 
@@ -59,9 +58,6 @@ var lastMouseY = null;      //
 
 
 
-// ===================================================================================================
-/* Pieces */
-var objects = [];           // Vetor de tipos de peças diferentes (bispo, rainha...)
 
 
 
@@ -71,6 +67,12 @@ var objects = [];           // Vetor de tipos de peças diferentes (bispo, rainh
 // Vertex Shader:
 var matrixLoc;              // Variável que contém a matriz final (projeção & model-view)
 var teamLoc;                // Flag para saber em qual time a peça atual está
+
+
+
+
+
+
 
 
 
@@ -356,7 +358,7 @@ function piece (team, x, y) {
                  translation: mat4(),
                  rotation: mat4(),
                  scaling: mat4(),
-                 matrix: matrix,
+                 matrix: mat4(),
                  hasToUpdateMatrix: false,
                  
                  translate: translate,
@@ -708,9 +710,9 @@ function RotTrackball(v) {
 function finalizeRotation() {
     // Roda o eye e o up do LookAt
     if (hasToUpdateRotation) {
-        eye = timesMV3(newRotation, eye);
-        up = timesMV3(newRotation, up);
-        newRotation = mat4();
+        eye = timesMV3(rotation, eye);
+        up = timesMV3(rotation, up);
+        rotation = mat4();
         
         lookat = lookAt(eye, at, up);
         
@@ -787,7 +789,7 @@ function handleMouseMove(event) {
     
     // Roda a cena de acordo
     var velocidade = 4;
-    newRotation = RotTrackball(vec2(velocidade * deltaX, velocidade * deltaY));
+    rotation = RotTrackball(vec2(velocidade * deltaX, velocidade * deltaY));
     
     hasToUpdateRotation = true;
     
