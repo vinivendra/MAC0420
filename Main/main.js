@@ -3,6 +3,8 @@
 var canvas;
 var gl;
 
+var screenWidth;
+var screenHeight;
 
 
 // ===================================================================================================
@@ -15,6 +17,10 @@ var previousPointsSize = 0; // Tamanho acumulativo do vetor de vértices,
 // Contador para os vetores acima
 var i = 0;
 
+
+// Perspectiva
+var proj = mat4();
+
 /* Variáveis de projeção */
 var matrix = mat4();        // Matrix de projeção
 
@@ -25,6 +31,12 @@ var rotation = mat4();      // Matriz componente de rotação da projeção, com
 var rotationz;              // Matriz referente à rotação da cena no eixo Z
 var rotationx;              // Idem, para X
 var rotationy;              // Idem, para Y
+
+var oldRotation = mat4();
+var newRotation = mat4();
+var eye = vec3();
+var at = vec3();
+var up = vec3();
 
 var psi = 0;                // Ângulos referentes às três matrizes acima
 var theta = 0;              //
@@ -81,6 +93,9 @@ window.onload = function init()
     if ( !gl ) { alert( "WebGL isn't available" ); }
     
     
+    screenWidth = canvas.width;
+    screenHeight = canvas.height;
+    
     
     
     /* Inicialização dos dados */
@@ -121,7 +136,7 @@ window.onload = function init()
     gl.bufferData( gl.ARRAY_BUFFER, flatten(points), gl.DYNAMIC_DRAW );
     
     var vPosition = gl.getAttribLocation( program, "vPosition" );
-    gl.vertexAttribPointer( vPosition, 3, gl.FLOAT, false, 0, 0 );
+    gl.vertexAttribPointer( vPosition, 4, gl.FLOAT, false, 0, 0 );
     gl.enableVertexAttribArray( vPosition );
     
     
@@ -133,10 +148,33 @@ window.onload = function init()
     
     
     // Configuração inicial da matriz de projeção
-    rotateZ(0);
-    rotateX(0);
-    rotateY(0);
+    theta = -45;
+    psi = 45;
+//    rotateZ(0);
+//    rotateX(0);
+//    rotateY(0);
     
+//    oldRotation = [vec4(1.0, 0.0, 0.0, 0.0),
+//                   vec4(0.0, 1.0, 0.0, 0.0),
+//                   vec4(0.0, 0.0, 1.0, 0.0),
+//                   vec4(0.0, 0.0, 0.0, 1.0)];
+//    
+//    newRotation = oldRotation;
+    
+    
+    
+    var radius = 0.7;
+    
+    eye = vec3(radius * Math.cos(theta), radius * Math.sin(theta) * Math.cos(phi), radius * Math.sin(theta) * Math.sin(phi));
+    at = vec3(0.0, 0.0, 0.0);
+    up = vec3(0.0, 1.0, 0.0);
+    
+    //console.log(eye);
+    //console.log(up);
+    
+//    aspect =  canvas.width/canvas.height;
+
+//    proj = perspective(90.0, aspect, 0.3, 7.0);
     
     // Começa o loop de execução
     render();
@@ -168,7 +206,7 @@ function readVertices(piece) {
     while (piece.string.charAt(i) == 'v' && piece.string.charAt(i+1) != 'n') {
         i += 2;                     // Pula o "v "
         var j;                      // j vai para o fim de cada número
-        var vertex = vec3();        // O novo vértice a ser adicionado
+        var vertex = vec4();        // O novo vértice a ser adicionado
         
         // Leitura da coordenada x
         for (j = i; piece.string.charAt(j) != ' '; j++);            // Acha o fim do número
@@ -185,6 +223,8 @@ function readVertices(piece) {
         vertex[2] = parseFloat(piece.string.substr(i, j-1)) / 2;
         
         i = j + 1;      // Vai para a próxima linha
+        
+        vertex[3] = 1.0;
         
         // Coloca o novo vértice na lista
         vertices.push( vertex );
@@ -271,7 +311,7 @@ function piece (team, x, y) {
     else direction = 1.0;
     
     // Tamanho padrão das peças
-    var size = 0.5;
+    var size = 0.2;
     
     // Cria a peça
     var piece = ({exists: true,
@@ -312,6 +352,192 @@ function times(mat1, mat2) {
     
     return mat;
 }
+
+// Norma
+function norm(p) {
+    //console.log("norm = (", p[0], p[1], p[2], ") = ",p[0]*p[0] + p[1]*p[1] + p[2]*p[2]);
+    return Math.sqrt(p[0]*p[0] + p[1]*p[1] + p[2]*p[2]);
+}
+
+function norm2(p) {
+    return Math.sqrt(p[0]*p[0] + p[1]*p[1]);
+}
+
+// Produto vetorial
+function vcross(p, v) {
+    var c = vec3(p[0] * v[1] - p[1] * v[0], - p[0] * v[2] + p[2] * v[0], p[1] * v[2] - p[2] * v[1]);
+    return c;
+}
+
+// Produto interno
+function vdot(p, v) {
+    //console.log("dot(", p[0] * v[0] + p[1] * v[1] + p[2] * v[2], ")");
+    return p[0] * v[0] + p[1] * v[1] + p[2] * v[2];
+}
+
+// Radianos e graus
+function radians (a) {
+    return a * Math.PI / 180.0;
+}
+function degrees (a) {
+    return a * 180.0 / Math.PI;
+}
+
+
+// Ângulo
+function angle(p, q) {
+    var a = norm(p);
+    var b = norm(q);
+    var c = vdot(p, q);
+    
+    //console.log("===", a, b, c, c/(a*b), degrees(c/(a*b)));
+    
+    return Math.acos(c/(a*b));
+}
+
+// "Projeção" de um ponto (x,z) para um (x,y,z) na esfera unitária
+function getY(p) {
+    var s = Math.sqrt(1 - p[0]*p[0] - p[1]*p[1]);
+    
+    return s;
+}
+
+
+// Multiplica uma matriz por um vetor
+function timesMV(m, v) {
+    var r = [0.0, 0.0, 0.0, 0.0];
+    var x = 0;
+    var k = 0;
+    
+    for (var i = 0; i < 4; i++) {
+        for (var j = 0; j < 4; j++) {
+            x += m[i][j] * v[j];
+        }
+        r[k] = x;
+        k++;
+        x = 0;
+    }
+    
+    
+    return r;
+}
+
+function timesMV3(m, v) {
+    var r = [0.0, 0.0, 0.0];
+    var x = 0;
+    var k = 0;
+    
+    //console.log("{", v[0], v[1], v[2], "}");
+    
+    for (var i = 0; i < 3; i++) {
+        for (var j = 0; j < 3; j++) {
+            x += m[i][j] * v[j];
+        }
+    //console.log(m[i][0], m[i][1], m[i][2]);
+        r[k] = x;
+        k++;
+        x = 0;
+    }
+    
+    return r;
+}
+
+
+// Rotação de quatérnio
+function quatRot(q, v, t) {
+    var c = Math.cos(t/2);
+    var s = Math.sin(t/2);
+    
+    var p = vec3(q[1], q[2], q[3]);
+    var crossVP = vcross(p, v);
+    
+    var p1 = (c * c) * p;
+    var p2 = (s * s) * vdot(p, v) * v;
+    var p3 = 2 * c * s * crossVP;
+    var p4 = -s * vcross(crossVP, v);
+    
+    return p1 + p2 + p3 + p4;
+}
+
+// Devolve a matriz correspondente à rotação do (0, 1, 0) para um outro vetor,
+// o (x,y,z) na esfera unitária correspondente ao v = (x,z) dado
+function RotTrackball(v) {
+    // Cria o p, acha o q na esfera
+    var p = vec3(0.0, 1.0, 0.0);
+    v = vec2(v[0]/(screenWidth*2), v[1]/(screenHeight*2));
+    var q = vec3(v[0], getY(v), v[1]);
+    
+    
+    // Calcula o vetor pelo qual rodar e o ângulo de rotação sobre ele
+    var c = vcross(p, q);
+    
+    //console.log("Angle p & q");
+    var a = angle(p, q);
+    
+    
+    // Normaliza o vetor
+    //console.log("Norm of c");
+    var n = norm(c);
+    if (n != 0) {
+        c = vec4(c[0]/n, c[1]/n, c[2]/n, 0.0);
+        
+        
+        //    // Calcula a projeção do vetor no plano x=0
+        //    var dx = Math.sqrt(c[0] * c[0] + c[1] * c[1]);
+        //
+        //    // Já podemos ter a rotação em x
+        //    var Rx = [vec4(1.0,     0.0,      0.0, 0.0),
+        //              vec4(0.0, c[2]/dx, -c[1]/dx, 0.0),
+        //              vec4(0.0, c[1]/dx,  c[2]/dx, 0.0),
+        //              vec4(0.0,     0.0,      0.0, 1.0) ];
+        //
+        //    var Rmx = [vec4(1.0,      0.0,     0.0, 0.0),
+        //               vec4(0.0,  c[2]/dx, c[1]/dx, 0.0),
+        //               vec4(0.0, -c[1]/dx, c[2]/dx, 0.0),
+        //               vec4(0.0,      0.0,     0.0, 1.0) ];
+        //
+        //    // Roda em x para poder achar a rotação em y
+        //    c = timesMV(Rx, c);
+        
+        // Acha a próxima projeção
+        dy = c[2];
+        
+        // Calcula a rotação em y
+        var Ry = [vec4(    dy, 0.0, c[0], 0.0),
+                  vec4(   0.0, 1.0,  0.0, 0.0),
+                  vec4( -c[0], 0.0,   dy, 0.0),
+                  vec4(   0.0, 0.0,  0.0, 1.0) ];
+        
+        var Rmy = [vec4(   dy, 0.0, -c[0], 0.0),
+                   vec4(  0.0, 1.0,   0.0, 0.0),
+                   vec4( c[0], 0.0,    dy, 0.0),
+                   vec4(  0.0, 0.0,   0.0, 1.0) ];
+        
+        // Calcula a rotação em z
+        
+        var cos = Math.cos(a);
+        var sin = Math.sin(a);
+        
+        var Rz = [vec4( cos, -sin, 0.0, 0.0),
+                  vec4( sin,  cos, 0.0, 0.0),
+                  vec4( 0.0,  0.0, 1.0, 0.0),
+                  vec4( 0.0,  0.0, 0.0, 1.0) ];
+        
+        //console.log(":::", a, n, cos, sin, dy);
+        
+        // Calcula a rotação final
+        //    var m1 = times( Ry, times(Rx));
+        var m2 = times(Rz, Ry);
+        var m3 = times(Rmy, m2);
+        //    var m = times(Rmx, m3);
+    }
+    else {
+        var m3 = mat4();
+    }
+    return m3;
+}
+
+
 
 
 
@@ -362,7 +588,8 @@ function createMatrix() {
     
     // Multplica pela de projeção e rnetorna uma matriz
     // pronta para ser mandada para o vertex shader
-    return times(matrix, this.matrix);
+    
+    return this.matrix;
 }
 
 
@@ -442,7 +669,12 @@ function translateFromOrigin() {
 function finalizeRotation() {
     // Junta as cinco matrizes anteriores para criar a matriz de projeção que queremos
     if (hasToUpdateRotation) {
-        rotation = times(times(translateFromOrigin(), times(rotationy, times(rotationx, rotationz))), translateToOrigin());
+//        rotation = times(times(translateFromOrigin(), times(rotationy, times(rotationx, rotationz))), translateToOrigin());
+        oldRotation = times(newRotation, oldRotation);
+        eye = timesMV3(newRotation, eye);
+        up = timesMV3(newRotation, up);
+        
+//        rotation = times(times(translateFromOrigin(), oldRotation, translateToOrigin()));
         
         hasToUpdateRotation = false;
         hasToUpdateMatrix = true;
@@ -453,7 +685,7 @@ function finalizeRotation() {
 // certo da tela) com a rotação feita pelo usuário
 function finalizeMatrix() {
     if (hasToUpdateMatrix) {
-        matrix = times(translation, rotation);
+        matrix = times(proj, times(translation, rotation));
         hasToUpdateMatrix = false;
     }
 }
@@ -491,8 +723,14 @@ function handleMouseMove(event) {
     var deltaY = newY - lastMouseY;
     
     // Roda a cena de acordo
-    rotateY(-deltaX/30);
-    rotateX(-deltaY/30);
+//    phi += -deltaX/30;
+//    theta += -deltaY/30;
+//    rotateY(0.0);
+//    rotateX(0.0);
+    newRotation = RotTrackball(vec2(4*deltaX, 4*deltaY));
+    //console.log("mouse!");
+    hasToUpdateRotation = true;
+    
     
     // Atualiza a posição "anterior" do mouse
     lastMouseX = newX
@@ -511,6 +749,10 @@ function render() {
     finalizeMatrix();
     
     
+    var projec = ortho(-2.0, 2.0, -2.0, 2.0, -0.1, -4.1);
+    projec = perspective(45, 16/9, 2.0, 0.3);
+    
+    
     // Para cada tipo de peça
     for (var i = 0; i < objects.length; i++) {
         // e para cada peça desse tipo
@@ -518,7 +760,7 @@ function render() {
             // Se a peça ainda não foi comida
             if (objects[i].instances[j].exists) {
                 // Manda para o shader a matriz a ser aplicada (projeção x model-view)
-                gl.uniformMatrix4fv(matrixLoc, false, flatten(objects[i].instances[j].createMatrix()));
+                gl.uniformMatrix4fv(matrixLoc, false, flatten(times(projec, times(lookAt(eye, at, up), objects[i].instances[j].createMatrix()))));
                 // Manda também a cor da peça, para podermos passar a cor certa para o fragment shader
                 gl.uniform1i(teamLoc, objects[i].instances[j].color);
                 
