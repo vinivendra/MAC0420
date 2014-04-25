@@ -40,9 +40,9 @@ var eye = vec3();
 var at = vec3();
 var up = vec3();
 
-var psi = 0;                // Ângulos referentes às três matrizes acima
-var theta = 0;              //
-var phi = 0;                //
+//var psi = 0;                // Ângulos referentes às três matrizes acima
+//var theta = 0;              //
+//var phi = 0;                //
 
 var hasToUpdateRotation = true;     // Flag para saber se é necessário
                                     // recalcular a componente de rotação da projeção;
@@ -95,12 +95,14 @@ window.onload = function init()
     if ( !gl ) { alert( "WebGL isn't available" ); }
     
     
+    
+    
+    // Seta os valores do tamanho da tela
     screenWidth = canvas.width;
     screenHeight = canvas.height;
     
     
     
-    /* Inicialização dos dados */
     
     // Inicializa as informações das peças
     initObjects();
@@ -110,6 +112,7 @@ window.onload = function init()
         readVertices(objects[i]);
         readFaces(objects[i]);
     }
+    
     
     
     // Liga os callbacks do mouse
@@ -124,12 +127,21 @@ window.onload = function init()
     gl.viewport( 0, 0, canvas.width, canvas.height );
     gl.clearColor( 1.0, 1.0, 1.0, 1.0 );
     
+    
+    
+    
     // Enable hidden-surface removal
     gl.enable(gl.DEPTH_TEST);
+    
+    
+    
     
     // Load shaders and initialize attribute buffers
     var program = initShaders( gl, "vertex-shader", "fragment-shader" );
     gl.useProgram( program );
+    
+    
+    
     
     // Create a buffer object, initialize it, and associate it with the
     // associated attribute variable in our vertex shader
@@ -143,44 +155,65 @@ window.onload = function init()
     
     
     
+    
+    
     // Pega as variáveis uniformes dos shaders
     matrixLoc = gl.getUniformLocation(program, "matrix");
     teamLoc = gl.getUniformLocation(program, "team");
 
     
-    
-    // Configuração inicial da matriz de projeção
-    theta = -45;
-    psi = 45;
-//    rotateZ(0);
-//    rotateX(0);
-//    rotateY(0);
-    
-//    oldRotation = [vec4(1.0, 0.0, 0.0, 0.0),
-//                   vec4(0.0, 1.0, 0.0, 0.0),
-//                   vec4(0.0, 0.0, 1.0, 0.0),
-//                   vec4(0.0, 0.0, 0.0, 1.0)];
-//    
-//    newRotation = oldRotation;
-    
-    
-    
+    // Inicializa a matriz lookat na posição inicial desejada (arbitrária)
     var radius = 0.7;
-    
+    var theta = 45;
+    var phi = 45;
     eye = vec3(radius * Math.cos(theta), radius * Math.sin(theta) * Math.cos(phi), radius * Math.sin(theta) * Math.sin(phi));
     at = vec3(0.0, 0.0, 0.0);
     up = vec3(0.0, 1.0, 0.0);
     
-    //console.log(eye);
-    //console.log(up);
     
-//    aspect =  canvas.width/canvas.height;
-
-//    proj = perspective(90.0, aspect, 0.3, 7.0);
+    
+    
     
     // Começa o loop de execução
     render();
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -341,7 +374,46 @@ function piece (team, x, y) {
 
 
 
-/* AUXILIARES */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* AUXILIARES DE ÁLGEBRA LINEAR */
 // Multiplicação simples e não muito rápida de duas matrizes 4x4
 function times(mat1, mat2) {
     var mat = mat4();
@@ -457,6 +529,110 @@ function quatRot(q, v, t) {
     return p1 + p2 + p3 + p4;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* MATRIZES DE ORIENTAÇÃO DOS OBJETOS */
+// Translação
+function translate(x, y, z) {
+    // Soma os valores à posição da peça
+    this.position[0] += x;
+    this.position[1] += y;
+    this.position[2] += z;
+    
+    // Cria a matriz correspondente ao movimento do vetor (x, y, z)
+    this.translation = [
+                        vec4(  1,  0,  0,  this.position[0] ),
+                        vec4(  0,  1,  0,  this.position[1] ),
+                        vec4(  0,  0,  1,  this.position[2] ),
+                        vec4(  0,  0,  0,  1 )
+                        ];
+    
+    // Seta a flag para recriarmos a matriz geral deste objeto
+    this.hasToUpdateMatrix = true;
+}
+
+// Escala
+function rescale(x, y, z) {
+    // Análogo ao método acima
+    this.scale[0] *= x;
+    this.scale[1] *= y;
+    this.scale[2] *= z;
+    
+    this.scaling = [
+                    vec4(  this.scale[0],  0,  0,  0 ),
+                    vec4(  0,  this.scale[1],  0,  0 ),
+                    vec4(  0,  0,  this.scale[2],  0 ),
+                    vec4(  0,  0,  0,  1 )
+                    ];
+    
+    this.hasToUpdateMatrix = true;
+}
+
+// Junta escala, translação e rotação dos objetos
+function getMatrix() {
+    if (this.hasToUpdateMatrix) {
+        this.matrix = times(times(this.rotation, this.scaling), this.translation);
+        this.hasToUpdateMatrix = false;
+    }
+    
+    return this.matrix;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* MATRIZES DE ORIENTAÇÃO DA CENA */
 // Devolve a matriz correspondente à rotação do p=(0, 1, 0) para um outro vetor,
 // o q=(x,y,z) na esfera unitária correspondente ao v = (x,z) dado.
 function RotTrackball(v) {
@@ -528,66 +704,7 @@ function RotTrackball(v) {
     return m;
 }
 
-
-
-
-
-
-/* MATRIZES DE ORIENTAÇÃO DE OBJETOS */
-// Translação
-function translate(x, y, z) {
-    // Soma os valores à posição da peça
-    this.position[0] += x;
-    this.position[1] += y;
-    this.position[2] += z;
-    
-    // Cria a matriz correspondente ao movimento do vetor (x, y, z)
-    this.translation = [
-                        vec4(  1,  0,  0,  this.position[0] ),
-                        vec4(  0,  1,  0,  this.position[1] ),
-                        vec4(  0,  0,  1,  this.position[2] ),
-                        vec4(  0,  0,  0,  1 )
-                        ];
-    
-    // Seta a flag para recriarmos a matriz geral deste objeto
-    this.hasToUpdateMatrix = true;
-}
-
-// Escala
-function rescale(x, y, z) {
-    // Análogo ao método acima
-    this.scale[0] *= x;
-    this.scale[1] *= y;
-    this.scale[2] *= z;
-    
-    this.scaling = [
-                    vec4(  this.scale[0],  0,  0,  0 ),
-                    vec4(  0,  this.scale[1],  0,  0 ),
-                    vec4(  0,  0,  this.scale[2],  0 ),
-                    vec4(  0,  0,  0,  1 )
-                    ];
-    
-    this.hasToUpdateMatrix = true;
-}
-
-// Junta escala, translação e rotação dos objetos
-function getMatrix() {
-    if (this.hasToUpdateMatrix) {
-        this.matrix = times(times(this.rotation, this.scaling), this.translation);
-        this.hasToUpdateMatrix = false;
-    }
-    
-    // Multplica pela de projeção e rnetorna uma matriz
-    // pronta para ser mandada para o vertex shader
-    
-    return this.matrix;
-}
-
-
-
-
-/* MATRIZES DE ORIENTAÇÃO DA CENA */
-
+// Joga a matriz de rotação para os vetores do lookat
 function finalizeRotation() {
     // Roda o eye e o up do LookAt
     if (hasToUpdateRotation) {
@@ -600,6 +717,41 @@ function finalizeRotation() {
         hasToUpdateRotation = false;
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -634,19 +786,54 @@ function handleMouseMove(event) {
     var deltaY = newY - lastMouseY;
     
     // Roda a cena de acordo
-//    phi += -deltaX/30;
-//    theta += -deltaY/30;
-//    rotateY(0.0);
-//    rotateX(0.0);
-    newRotation = RotTrackball(vec2(4*deltaX, 4*deltaY));
-    //console.log("mouse!");
+    var velocidade = 4;
+    newRotation = RotTrackball(vec2(velocidade * deltaX, velocidade * deltaY));
+    
     hasToUpdateRotation = true;
     
     
     // Atualiza a posição "anterior" do mouse
     lastMouseX = newX
     lastMouseY = newY;
+    
+    // Pede pra um novo frame ser renderizado
+    requestAnimFrame(render);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 /* RENDERING */
@@ -658,9 +845,10 @@ function render() {
     // Deixa a matriz de projeção pronta para ser aplicada
     finalizeRotation();
     
-    
-    var projec = ortho(-2.0, 2.0, -2.0, 2.0, -0.1, -4.1);
-    projec = perspective(45, 16/9, 2.0, 0.3);
+    // Projeção ortogonal:
+    // ortho(-2.0, 2.0, -2.0, 2.0, -0.1, -4.1);
+    // Projeção perspectiva:
+    var projec = perspective(45, 16/9, 2.0, 0.3);
     
     
     // Para cada tipo de peça
@@ -669,8 +857,9 @@ function render() {
         for (var j = 0; j < objects[i].instances.length; j++) {
             // Se a peça ainda não foi comida
             if (objects[i].instances[j].exists) {
-                // Manda para o shader a matriz a ser aplicada (projeção x model-view)
+                // Manda para o shader a matriz a ser aplicada (projeção x view x model)
                 gl.uniformMatrix4fv(matrixLoc, false, flatten(times(projec, times(lookat, objects[i].instances[j].getMatrix()))));
+                
                 // Manda também a cor da peça, para podermos passar a cor certa para o fragment shader
                 gl.uniform1i(teamLoc, objects[i].instances[j].color);
                 
@@ -679,9 +868,6 @@ function render() {
             }
         }
     }
-    
-    // Já pede que um novo frame seja renderizado
-    requestAnimFrame(render);
 }
 
 
