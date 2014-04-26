@@ -41,7 +41,7 @@ var at = vec3();
 var up = vec3();
 var lookat = mat4();
 
-var hasToUpdateRotation = true;     // Flag para saber se é necessário
+var hasToUpdateLookAt = true;     // Flag para saber se é necessário
                                     // recalcular a componente de rotação da lookat;
 
 
@@ -122,6 +122,7 @@ window.onload = function init()
     document.onmouseup = handleMouseUp;
     document.onmousemove = handleMouseMove;
     
+
     
     
     
@@ -709,14 +710,14 @@ function RotTrackball(v) {
 // Joga a matriz de rotação para os vetores do lookat
 function finalizeRotation() {
     // Roda o eye e o up do LookAt
-    if (hasToUpdateRotation) {
+    if (hasToUpdateLookAt) {
         eye = timesMV3(rotation, eye);
         up = timesMV3(rotation, up);
         rotation = mat4();
         
         lookat = lookAt(eye, at, up);
         
-        hasToUpdateRotation = false;
+        hasToUpdateLookAt = false;
     }
 }
 
@@ -787,12 +788,18 @@ function handleMouseMove(event) {
     var deltaX = newX - lastMouseX;
     var deltaY = newY - lastMouseY;
     
-    // Roda a cena de acordo
-    var velocidade = 4;
-    rotation = RotTrackball(vec2(velocidade * deltaX, velocidade * deltaY));
-    
-    hasToUpdateRotation = true;
-    
+    if (event.shiftKey) {
+        var dy = 1 - deltaY/screenHeight;
+        eye = vec3(eye[0] * dy, eye[1] * dy, eye[2] * dy);
+        hasToUpdateLookAt = true;
+    }
+    else {
+        // Roda a cena de acordo
+        var velocidade = 4;
+        rotation = RotTrackball(vec2(velocidade * deltaX, velocidade * deltaY));
+        
+        hasToUpdateLookAt = true;
+    }
     
     // Atualiza a posição "anterior" do mouse
     lastMouseX = newX
