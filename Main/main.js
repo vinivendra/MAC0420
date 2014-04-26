@@ -857,7 +857,7 @@ function render() {
     // Projeção ortogonal:
     // ortho(-2.0, 2.0, -2.0, 2.0, -0.1, -4.1);
     // Projeção perspectiva:
-    var projec = perspective(45, 16/9, 2.0, 0.3);
+    var projec = perspective(45, 16/9, 2.0, 0.0001);
     
     
     // Para cada tipo de peça
