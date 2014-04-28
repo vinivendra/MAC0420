@@ -7,7 +7,8 @@ var gl;
 var screenWidth;
 var screenHeight;
 
-
+// Tempo entre cada frame
+var time;
 
 
 
@@ -25,8 +26,13 @@ var i = 0;
 // Vetor com as informações sobre cada peça
 var objects = [];
 
-
-
+// =================================================
+// Vetor de movimentos das peças
+var plays = [];
+// Tamanho do vetor
+var playCount = 0;
+// Flag para saber se estamos no meio de uma jogada
+var isPlaying = 0;
 
 
 
@@ -67,6 +73,7 @@ var lastMouseY = null;      //
 // Vertex Shader:
 var matrixLoc;              // Variável que contém a matriz final (projeção & model-view)
 var teamLoc;                // Flag para saber em qual time a peça atual está
+var alphaLoc                // Quantidade de alpha a se usar na peça
 
 
 
@@ -93,7 +100,7 @@ window.onload = function init()
     /* Inicialização do WebGL */
     canvas = document.getElementById( "gl-canvas" );
     
-    gl = WebGLUtils.setupWebGL( canvas );
+    gl = WebGLUtils.setupWebGL( canvas, {premultupliedAlpha:false} );
     if ( !gl ) { alert( "WebGL isn't available" ); }
     
     
@@ -163,10 +170,11 @@ window.onload = function init()
     // Pega as variáveis uniformes dos shaders
     matrixLoc = gl.getUniformLocation(program, "matrix");
     teamLoc = gl.getUniformLocation(program, "team");
+    alphaLoc = gl.getUniformLocation(program, "alpha");
 
     
     // Inicializa a matriz lookat na posição inicial desejada (arbitrária)
-    var radius = 0.7;
+    var radius = 1;
     var theta = 45;
     var phi = 45;
     eye = vec3(radius * Math.cos(theta), radius * Math.sin(theta) * Math.cos(phi), radius * Math.sin(theta) * Math.sin(phi));
@@ -174,6 +182,12 @@ window.onload = function init()
     up = vec3(0.0, 1.0, 0.0);
     
     
+    
+    
+    // Inicializa o vetor de jogadas (nao deve ficar aqui)
+    newPlay(5);
+    newPlay(3);
+    runPlays();
     
     
     
@@ -352,23 +366,30 @@ function piece (team, x, y) {
     var size = 0.2;
     
     // Cria a peça
-    var piece = ({exists: true,
-                 color: team,
-                 position: vec3(-0.18, 0.0, 0.0),
-                 scale: vec3( direction, 1.0, 1.0 ),
-                 translation: mat4(),
-                 rotation: mat4(),
-                 scaling: mat4(),
-                 matrix: mat4(),
-                 hasToUpdateMatrix: false,
+    var piece = ({
+                 exists: true,                      // Se ainda não foi comida
+                 color: team,                       // O time da peça
+                 alpha: 1.0,                        // O alpha da cor
+                 position: vec3(),                  // Posição no mundo
+                 scale: vec3( direction, 1.0, 1.0 ),// Escala da peça
+                 translation: mat4(),               // Matriz pessoal de translação
+                 rotation: mat4(),                  // Idem, para rotação
+                 scaling: mat4(),                   // Idem, para escala
+                 matrix: mat4(),                    // Junção das três acima
+                 hasToUpdateMatrix: false,          // Flag para saber quando remultiplicá-las
                  
-                 translate: translate,
+                 location: vec2(x, y),              // Posição no tabuleiro, medida em casas
+                 
+                 translate: translate,              // Funções de transformação geométrica
+                 setPosition: setPosition,          // Equivale a uma translação
                  rescale: rescale,
-                 getMatrix: getMatrix
+                 getMatrix: getMatrix               // Devolve a 'matrix'
                  });
     
-    // Translada ela para o lugar certo
-    piece.translate(0.35 * (-3.5 + x), 0.0, 0.35 * (-3.5 + y));
+    // Translada a peça para o lugar certo
+    var loc = boardToWorld(piece.location);
+    piece.setPosition(loc);
+    // Escala a peça para o tamanho certo e muda ela de direção se necessário
     piece.rescale(size, size, size);
     
     return piece;
@@ -382,6 +403,162 @@ function piece (team, x, y) {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*  Jogadas */
+// Cria uma nova jogada e insere ela na fila
+function newPlay (/*int*/ string) {
+    var p = ({piece: objects[0].instances[0],           // Peça que vai se mover
+             bOrigin: objects[0].instances[0].location, // Origem no tabuleiro
+             bDestination: vec2(string, string),        // Destino no tabuleiro
+             wOrigin: objects[0].instances[0].position, // Origem no mundo
+             wDestination: boardToWorld(vec2(string, string)),     // Destino no mundo
+             direction: vec3(),                         // Vetor unitário de direção (no mundo)
+             
+             init:initPlay,                             // Inicializa as informações de acordo com
+                                                        // a situação instantânea do tabuleiro
+             
+             deadPiece: 0,//objects[0].instances[27],
+             });
+    
+    
+
+    
+    
+    // Adiciona a nova jogada ao vetor de jogadas
+    plays.push(p);
+}
+
+
+function initPlay() {
+    // Cria o vetor de direção e normaliza ele
+    this.direction = vec3(this.wDestination[0] - this.wOrigin[0], this.wDestination[1] - this.wOrigin[1], this.wDestination[2] - this.wOrigin[2]);
+    
+    var n = norm3(this.direction);
+    this.direction = vec3(this.direction[0]/n, this.direction[1]/n, this.direction[2]/n);
+}
+
+
+// Roda a primeira jogada da fila
+function runPlays () {
+    // Se ainda tem alguma jogada para rodar
+    if (plays.length > 0) {
+        // Se estamos começando uma nova jogada
+        if (isPlaying == 0) {
+            // Time vai ser o instante em que a jogada começou
+            time = (new Date()).getTime();
+            
+            // A jogada começou
+            isPlaying = 1;
+            
+            // Inicializa a jogada
+            plays[0].init();
+            
+            console.log("Comecou");
+        }
+        // Se estamos no meio de uma jogada
+        else {
+            // Pega a próxima jogada a executar e a peça dela
+            var play = plays[0];
+            var piece = play.piece;
+            
+            // Pega o intervalo de tempo passado desde a última atualização
+            var newTime = (new Date()).getTime();
+            var dt = (newTime - time)/1000;
+            time = newTime;
+            // Define a velocidade de andamento da peça
+            var speed = 0.2;
+            // E define o vetor de deslocamento dela
+            var desloc = vec3(play.direction[0] * speed * dt, play.direction[1] * speed * dt, play.direction[2] * speed * dt);
+            
+            // Descobre quanto a peça ainda pode andar
+            // limit = wDestination - position
+            var limit = vec3(play.wDestination[0] - piece.position[0], play.wDestination[1] - piece.position[1], play.wDestination[2] - piece.position[2]);
+            
+            
+            
+            // Se estamos nos aproximando de uma peça a ser comida
+            if (norm3(limit) < 1.0 && play.deadPiece != 0) {
+                play.deadPiece.alpha -= dt;
+            }
+            // Se vamos andar (desloc) mais do que podemos (limit)
+            if (norm3(desloc) > norm3(limit)) {
+                // Então só vamos andar até onde der
+                desloc = limit;
+                
+                // E vamos transladar exatamente para aquela posição
+                piece.setPosition(play.wDestination);
+                
+                // E essa jogada já acabou
+                isPlaying = 0;
+                
+                console.log("CHEGOU");
+            }
+            // Se ainda não acabou
+            else {
+                // Translada a peça naquela direção
+                piece.translate(desloc[0], desloc[1], desloc[2]);
+                
+//                console.log("ANDA: ", play.direction);
+            }
+            
+            // Se a jogada já acabou, retiramos ela do vetor
+            if (isPlaying == 0) {
+                console.log("Tirei: ", plays.length);
+                plays.shift();
+                console.log("Ficou: ", plays.length);
+                sleep(2000);
+                if (plays.length == 0) {
+                    console.log("Ta vazio");
+                }
+                play.deadPiece.alpha = 0;
+            }
+            
+        }
+    }
+}
+
+// Returns a world coordinate from a board coordinate
+function boardToWorld(loc) {
+    return vec3(0.09 * (-3.5 + loc[0]), 0.0, 0.09 * (-3.5 + loc[1]));
+}
+
+
+
+
+
+function sleep(milliseconds) {
+    var start = new Date().getTime();
+    while (1) {
+        if ((new Date().getTime() - start) > milliseconds){
+            break;
+        }
+    }
+}
 
 
 
@@ -584,6 +761,26 @@ function translate(x, y, z) {
                         vec4(  0,  0,  0,  1 )
                         ];
     
+    
+    // Seta a flag para recriarmos a matriz geral deste objeto
+    this.hasToUpdateMatrix = true;
+}
+
+function setPosition(newPosition) {
+    // Soma os valores à posição da peça
+    this.position[0] = newPosition[0];
+    this.position[1] = newPosition[1];
+    this.position[2] = newPosition[2];
+    
+    // Cria a matriz correspondente ao movimento do vetor (x, y, z)
+    this.translation = [
+                        vec4(  1,  0,  0,  this.position[0] ),
+                        vec4(  0,  1,  0,  this.position[1] ),
+                        vec4(  0,  0,  1,  this.position[2] ),
+                        vec4(  0,  0,  0,  1 )
+                        ];
+    
+    
     // Seta a flag para recriarmos a matriz geral deste objeto
     this.hasToUpdateMatrix = true;
 }
@@ -608,7 +805,7 @@ function rescale(x, y, z) {
 // Junta escala, translação e rotação dos objetos
 function getMatrix() {
     if (this.hasToUpdateMatrix) {
-        this.matrix = times(times(this.rotation, this.scaling), this.translation);
+        this.matrix = times(times(this.translation, this.rotation), this.scaling);
         this.hasToUpdateMatrix = false;
     }
     
@@ -806,7 +1003,7 @@ function handleMouseMove(event) {
     lastMouseY = newY;
     
     // Pede pra um novo frame ser renderizado
-    requestAnimFrame(render);
+//    requestAnimFrame(render);
 }
 
 
@@ -851,11 +1048,15 @@ function render() {
     // Limpa a tela
     gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     
+    // Move a peça
+    runPlays();
+    
     // Deixa a matriz de projeção pronta para ser aplicada
     finalizeRotation();
     
     // Projeção ortogonal:
-    // ortho(-2.0, 2.0, -2.0, 2.0, -0.1, -4.1);
+    // (Ainda está esquisita
+//    var projec = ortho(-0.5, 0.5, -0.5, 0.5, -0.1, -4.1);
     // Projeção perspectiva:
     var projec = perspective(45, 16/9, 2.0, 0.0001);
     
@@ -871,12 +1072,18 @@ function render() {
                 
                 // Manda também a cor da peça, para podermos passar a cor certa para o fragment shader
                 gl.uniform1i(teamLoc, objects[i].instances[j].color);
+                // E o alpha a ser usado
+                gl.uniform1f(alphaLoc, objects[i].instances[j].alpha);
                 
                 // Desenha a peça atual
                 gl.drawArrays( gl.TRIANGLES, objects[i].vertexStart, objects[i].vertexEnd );
             }
         }
     }
+    
+    
+    
+    requestAnimFrame(render);
 }
 
 

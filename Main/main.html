@@ -9,6 +9,7 @@ attribute vec4 vPosition;
 varying vec4 color;
 uniform mat4 matrix;
 uniform bool team;
+uniform float alpha;
 
 void
 main()
@@ -24,7 +25,7 @@ main()
     else
         c = 0.6 + 0.5 * vPosition.y;
 
-    color = vec4(c, c, c, 1.0);
+    color = vec4(c, c, c, alpha);
     
     gl_Position = matrix * vPosition;
 }
@@ -87,7 +88,7 @@ main()
 </head>   
 
 <body>
-<canvas id="gl-canvas" width="512" height="512">
+<canvas id="gl-canvas" width="512" height="512" style="background: black;">
 Oops ... your browser doesn't support the HTML5 canvas element
 </canvas>
 </body>
