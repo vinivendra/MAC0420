@@ -53,13 +53,13 @@ var at = vec3();
 var up = vec3();
 var lookat = mat4();
 
-var hasToUpdateLookAt = true;     // Flag para saber se é necessário
+var hasToUpdateLookAt = true;       // Flag para saber se é necessário
                                     // recalcular a componente de rotação da lookat;
 
 // =================================================
 /* Variáveis de projeção */
-var projectionType = "Persp";      // "Flag" para saber se estamos na ortogonal ou na perspectiva
-var projec = perspective(45, 16/9, 2.0, 0.0001);    // Matriz de projeção
+var projectionType = "Persp";       // "Flag" para saber se estamos na ortogonal ou na perspectiva
+var projec = mat4();                // Matriz de projeção
 
 
 
@@ -123,11 +123,14 @@ window.onload = function init()
     if ( !gl ) { alert( "WebGL isn't available" ); }
     
     
-    
+    // Diz para a janela nos avisar quando o seu tamanho mudar
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
     
     // Seta os valores do tamanho da tela
     screenWidth = canvas.width;
     screenHeight = canvas.height;
+    
     
     
     
@@ -209,6 +212,10 @@ window.onload = function init()
     
     
     
+    // Inicializa a matriz de projeção
+    updatePerspective();
+    
+    
     
     // Inicializa o vetor de jogadas (nao deve ficar aqui)
     newPlay(5);
@@ -240,15 +247,22 @@ window.onload = function init()
 // Alterna entre a projeção ortogonal e a perspectiva
 function changeProjection() {
     if (projectionType == "Ortho") {
-        projec = perspective(45, 1.0, 2.0, 0.0001);
+        updatePerspective();
         projectionType = "Persp";
     }
     else {
-        projec = ortho(-0.5, 0.5, -0.5, 0.5, -0.1, -4.1);
+        updateOrthogonal();
         projectionType = "Ortho";
     }
 }
 
+function updatePerspective() {
+    projec = perspective(45, canvas.width/canvas.height, 2.0, 0.0001);
+}
+
+function updateOrthogonal() {
+    projec = ortho(-0.5, 0.5, -0.5, 0.5, -0.1, -4.1);
+}
 
 // Dá play ou pause nas animações
 function pausePlayPlayback() {
@@ -270,7 +284,39 @@ function pausePlayPlayback() {
 
 
 
-
+function resizeCanvas() {
+    // Guarda os valores anteriores
+    var wAntigo = canvas.width;
+    var hAntigo = canvas.height;
+    
+    // Pega o novo tamanho da nossa janela
+    if (canvas.width != canvas.clientWidth || canvas.height != canvas.clientHeight) {
+        console.log("Resize: ", canvas.width, canvas.height);
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
+        console.log("Novo: ", canvas.clientWidth, canvas.clientHeight);
+    }
+    
+    // Redimensiona o tamanho do viewPort
+    gl.viewport( 0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight );
+    
+    // Arruma a projeção
+    if (projectionType == "Ortho") {
+        updateOrthogonal();
+    }
+    else {
+        updatePerspective();
+    }
+    
+    
+    // Arruma o zoom
+    var minAntigo = Math.min(wAntigo, hAntigo);
+    var minNovo = Math.min(canvas.clientHeight, canvas.clientWidth);
+    var r = minAntigo/minNovo;
+    eye = vec3(eye[0] * r, eye[1] * r, eye[2] * r);
+    hasToUpdateLookAt = true;
+    
+}
 
 
 
@@ -1031,11 +1077,13 @@ function handleMouseMove(event) {
     var deltaX = newX - lastMouseX;
     var deltaY = newY - lastMouseY;
     
+    // Se estamos dando zoom
     if (event.shiftKey) {
         var dy = 1 - deltaY/screenHeight;
         eye = vec3(eye[0] * dy, eye[1] * dy, eye[2] * dy);
         hasToUpdateLookAt = true;
     }
+    // Se estamos girando a cena
     else {
         // Roda a cena de acordo
         var velocidade = 4;
