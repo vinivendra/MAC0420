@@ -12,6 +12,9 @@ var time;
 
 
 
+
+
+
 // ===================================================================================================
 /* Vértices para todas as peças */
 var vertices = [];          // Vértices de cada peça
@@ -36,6 +39,9 @@ var isPlaying = 0;
 
 
 
+
+
+
 // ===================================================================================================
 /* Variáveis de view */
 // Matriz para rodar o eye e o up
@@ -49,6 +55,12 @@ var lookat = mat4();
 
 var hasToUpdateLookAt = true;     // Flag para saber se é necessário
                                     // recalcular a componente de rotação da lookat;
+
+// =================================================
+/* Variáveis de projeção */
+var projectionType = "Persp";      // "Flag" para saber se estamos na ortogonal ou na perspectiva
+var projec = perspective(45, 16/9, 2.0, 0.0001);    // Matriz de projeção
+
 
 
 
@@ -64,6 +76,13 @@ var lastMouseY = null;      //
 
 
 
+
+
+
+// ===================================================================================================
+/* Playback */
+// Variáveis que controlam a animação das jogadas
+var playbackIsPlaying = true;
 
 
 
@@ -173,6 +192,13 @@ window.onload = function init()
     alphaLoc = gl.getUniformLocation(program, "alpha");
 
     
+    
+    
+    // Designa funções para os itens da interface
+    document.getElementById("Button1").onclick = changeProjection;
+    document.getElementById("Button2").onclick = pausePlayPlayback;
+    
+    
     // Inicializa a matriz lookat na posição inicial desejada (arbitrária)
     var radius = 1;
     var theta = 45;
@@ -209,6 +235,31 @@ window.onload = function init()
 
 
 
+/* Interface */
+
+// Alterna entre a projeção ortogonal e a perspectiva
+function changeProjection() {
+    if (projectionType == "Ortho") {
+        projec = perspective(45, 1.0, 2.0, 0.0001);
+        projectionType = "Persp";
+    }
+    else {
+        projec = ortho(-0.5, 0.5, -0.5, 0.5, -0.1, -4.1);
+        projectionType = "Ortho";
+    }
+}
+
+
+// Dá play ou pause nas animações
+function pausePlayPlayback() {
+    if (playbackIsPlaying == true) {
+        playbackIsPlaying = false;
+    }
+    else {
+        playbackIsPlaying = true;
+        time = (new Date()).getTime();
+    }
+}
 
 
 
@@ -442,11 +493,8 @@ function newPlay (/*int*/ string) {
              init:initPlay,                             // Inicializa as informações de acordo com
                                                         // a situação instantânea do tabuleiro
              
-             deadPiece: 0,//objects[0].instances[27],
+             deadPiece: objects[0].instances[27],
              });
-    
-    
-
     
     
     // Adiciona a nova jogada ao vetor de jogadas
@@ -465,79 +513,77 @@ function initPlay() {
 
 // Roda a primeira jogada da fila
 function runPlays () {
-    // Se ainda tem alguma jogada para rodar
-    if (plays.length > 0) {
-        // Se estamos começando uma nova jogada
-        if (isPlaying == 0) {
-            // Time vai ser o instante em que a jogada começou
-            time = (new Date()).getTime();
-            
-            // A jogada começou
-            isPlaying = 1;
-            
-            // Inicializa a jogada
-            plays[0].init();
-            
-            console.log("Comecou");
-        }
-        // Se estamos no meio de uma jogada
-        else {
-            // Pega a próxima jogada a executar e a peça dela
-            var play = plays[0];
-            var piece = play.piece;
-            
-            // Pega o intervalo de tempo passado desde a última atualização
-            var newTime = (new Date()).getTime();
-            var dt = (newTime - time)/1000;
-            time = newTime;
-            // Define a velocidade de andamento da peça
-            var speed = 0.2;
-            // E define o vetor de deslocamento dela
-            var desloc = vec3(play.direction[0] * speed * dt, play.direction[1] * speed * dt, play.direction[2] * speed * dt);
-            
-            // Descobre quanto a peça ainda pode andar
-            // limit = wDestination - position
-            var limit = vec3(play.wDestination[0] - piece.position[0], play.wDestination[1] - piece.position[1], play.wDestination[2] - piece.position[2]);
-            
-            
-            
-            // Se estamos nos aproximando de uma peça a ser comida
-            if (norm3(limit) < 1.0 && play.deadPiece != 0) {
-                play.deadPiece.alpha -= dt;
-            }
-            // Se vamos andar (desloc) mais do que podemos (limit)
-            if (norm3(desloc) > norm3(limit)) {
-                // Então só vamos andar até onde der
-                desloc = limit;
-                
-                // E vamos transladar exatamente para aquela posição
-                piece.setPosition(play.wDestination);
-                
-                // E essa jogada já acabou
-                isPlaying = 0;
-                
-                console.log("CHEGOU");
-            }
-            // Se ainda não acabou
-            else {
-                // Translada a peça naquela direção
-                piece.translate(desloc[0], desloc[1], desloc[2]);
-                
-//                console.log("ANDA: ", play.direction);
-            }
-            
-            // Se a jogada já acabou, retiramos ela do vetor
+    if (playbackIsPlaying == true) {
+        // Se ainda tem alguma jogada para rodar
+        if (plays.length > 0) {
+            // Se estamos começando uma nova jogada
             if (isPlaying == 0) {
-                console.log("Tirei: ", plays.length);
-                plays.shift();
-                console.log("Ficou: ", plays.length);
-                sleep(2000);
-                if (plays.length == 0) {
-                    console.log("Ta vazio");
-                }
-                play.deadPiece.alpha = 0;
+                // Time vai ser o instante em que a jogada começou
+                time = (new Date()).getTime();
+                
+                // A jogada começou
+                isPlaying = 1;
+                
+                // Inicializa a jogada
+                plays[0].init();
+                
             }
-            
+            // Se estamos no meio de uma jogada
+            else {
+                // Pega a próxima jogada a executar e a peça dela
+                var play = plays[0];
+                var piece = play.piece;
+                
+                // Pega o intervalo de tempo passado desde a última atualização
+                var newTime = (new Date()).getTime();
+                var dt = (newTime - time)/1000;
+                time = newTime;
+                // Define a velocidade de andamento da peça
+                var speed = 0.2;
+                // E define o vetor de deslocamento dela
+                var desloc = vec3(play.direction[0] * speed * dt, play.direction[1] * speed * dt, play.direction[2] * speed * dt);
+                
+                // Descobre quanto a peça ainda pode andar
+                // limit = wDestination - position
+                var limit = vec3(play.wDestination[0] - piece.position[0], play.wDestination[1] - piece.position[1], play.wDestination[2] - piece.position[2]);
+                
+                
+                
+                // Se estamos nos aproximando de uma peça a ser comida
+                if (norm3(limit) < 1.0 && play.deadPiece != 0) {
+                    play.deadPiece.alpha -= dt;
+                }
+                // Se vamos andar (desloc) mais do que podemos (limit)
+                if (norm3(desloc) > norm3(limit)) {
+                    // Então só vamos andar até onde der
+                    desloc = limit;
+                    
+                    // E vamos transladar exatamente para aquela posição
+                    piece.setPosition(play.wDestination);
+                    
+                    // E essa jogada já acabou
+                    isPlaying = 0;
+                    
+                }
+                // Se ainda não acabou
+                else {
+                    // Translada a peça naquela direção
+                    piece.translate(desloc[0], desloc[1], desloc[2]);
+                    
+                }
+                
+                // Se a jogada já acabou
+                if (isPlaying == 0) {
+                    // Retiramos ela do vetor
+                    plays.shift();
+                    
+                    // Remove a peça morta do vetor, caso exista
+                    var index;
+                    if ((index = objects[0].instances.indexOf(play.deadPiece)) != -1)
+                        objects[0].instances.splice(index,1);
+                }
+                
+            }
         }
     }
 }
@@ -1054,11 +1100,7 @@ function render() {
     // Deixa a matriz de projeção pronta para ser aplicada
     finalizeRotation();
     
-    // Projeção ortogonal:
-    // (Ainda está esquisita
-//    var projec = ortho(-0.5, 0.5, -0.5, 0.5, -0.1, -4.1);
-    // Projeção perspectiva:
-    var projec = perspective(45, 16/9, 2.0, 0.0001);
+
     
     
     // Para cada tipo de peça
