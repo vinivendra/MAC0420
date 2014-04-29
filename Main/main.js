@@ -32,8 +32,8 @@ var objects = [];
 // =================================================
 // Vetor de movimentos das peças
 var plays = [];
-// Tamanho do vetor
-var playCount = 0;
+// Índice atual no vetor
+var playIndex = 0;
 // Flag para saber se estamos no meio de uma jogada
 var isPlaying = 0;
 
@@ -201,6 +201,7 @@ window.onload = function init()
     // Designa funções para os itens da interface
     document.getElementById("Button1").onclick = changeProjection;
     document.getElementById("Button2").onclick = pausePlayPlayback;
+    document.getElementById("Button3").onclick = resetPlays;
     
     
     // Inicializa a matriz lookat na posição inicial desejada (arbitrária)
@@ -219,8 +220,8 @@ window.onload = function init()
     
     
     // Inicializa o vetor de jogadas (nao deve ficar aqui)
-    newPlay(5);
-    newPlay(3);
+    newPlay(5, 5);
+    newPlay(3, 3);
     runPlays();
     
     
@@ -243,33 +244,29 @@ window.onload = function init()
 
 
 
-/* Interface */
+/* INTERFACE */
 
 // Alterna entre a projeção ortogonal e a perspectiva
 function changeProjection() {
+    // Se era ortogonal, agora é perspectiva
     if (projectionType == "Ortho") {
         updatePerspective();
         projectionType = "Persp";
     }
+    // Se era perspectiva, agora é ortogonal
     else {
         updateOrthogonal();
         projectionType = "Ortho";
     }
 }
 
-function updatePerspective() {
-    projec = perspective(45, canvas.width/canvas.height, 2.0, 0.0001);
-}
-
-function updateOrthogonal() {
-    projec = ortho(-0.5, 0.5, -0.5, 0.5, -0.1, -4.1);
-}
-
 // Dá play ou pause nas animações
 function pausePlayPlayback() {
+    // Se estava animando, pausa
     if (playbackIsPlaying == true) {
         playbackIsPlaying = false;
     }
+    // Se não, dá play
     else {
         playbackIsPlaying = true;
         time = (new Date()).getTime();
@@ -279,57 +276,21 @@ function pausePlayPlayback() {
 
 
 
-
-
-
-
-
-
-function resizeCanvas() {
-    // Guarda os valores anteriores
-    var wAntigo = canvas.width;
-    var hAntigo = canvas.height;
+function resetPlays() {
+    // Recomeça as jogadas
+    playIndex = 0;
     
-    // Pega o novo tamanho da nossa janela
-    if (canvas.width != canvas.clientWidth || canvas.height != canvas.clientHeight) {
-        canvas.width = canvas.clientWidth;
-        canvas.height = canvas.clientHeight;
-        console.log("Novo: ", canvas.clientWidth, canvas.clientHeight);
-    }
-    
-    // Redimensiona o tamanho do viewPort
-    gl.viewport( 0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight );
-    
-    // Arruma a projeção
-    if (projectionType == "Ortho") {
-        updateOrthogonal();
-    }
-    else {
-        updatePerspective();
-    }
-    
-    
-    // Arruma o zoom
-    updateEye();
-    
+    // Recoloca as peças
+    resetObjects();
 }
 
 
 
-function updateEye() {
-    // Redimensiona baseado na menor dimensão
-    var minNovo = Math.min(canvas.clientHeight, canvas.clientWidth);
-    minNovo = Math.max(minNovo, 1);                 // Para não dividir por 0
-    
-    // Pega a razão de zoom
-    var r = 512/minNovo;
-    
-    // Aplica ao zoom absoluto
-    eye = vec3(eyeAbs[0] * r, eyeAbs[1] * r, eyeAbs[2] * r);
-    
-    // Manda o lookat se atualizar
-    hasToUpdateLookAt = true;
-}
+
+
+
+
+
 
 
 
@@ -449,6 +410,7 @@ function readFaces(piece) {
 // Inicializa as peças, com todas as informações necessárias
 // TEMPORARIAMENTE ASSIM:
 function initObjects() {
+    
     var bishop = {string: bishopVertices, vertexStart: 0, vertexEnd: 0, instances: []};
     
     for (var i = 0; i < 8; i++) {
@@ -473,7 +435,7 @@ function piece (team, x, y) {
     
     // Cria a peça
     var piece = ({
-                 exists: true,                      // Se ainda não foi comida
+                 exists: true,                     // Se a peça ainda existe
                  color: team,                       // O time da peça
                  alpha: 1.0,                        // O alpha da cor
                  position: vec3(),                  // Posição no mundo
@@ -485,6 +447,8 @@ function piece (team, x, y) {
                  hasToUpdateMatrix: false,          // Flag para saber quando remultiplicá-las
                  
                  location: vec2(x, y),              // Posição no tabuleiro, medida em casas
+                 
+                 originalLocation: vec2(x, y),      // Posição inicial no tabuleiro ("read-only")
                  
                  translate: translate,              // Funções de transformação geométrica
                  setPosition: setPosition,          // Equivale a uma translação
@@ -503,6 +467,42 @@ function piece (team, x, y) {
 
 
 
+// Reseta os objetos para recomeçar a partida
+function resetObjects() {
+    for (var i = 0; i < objects.length; i++) {
+        for (var j = 0; j < objects[i].instances.length; j++) {
+            // Pega a peça atual
+            var p = objects[i].instances[j];
+            
+            // Acha a direção para a qual a peça está olhando
+            var direction;
+            if (p.color) direction = -1.0;
+            else direction = 1.0;
+            
+            // Tamanho padrão das peças
+            var size = 0.2;
+
+            // Reseta tudo o que precisar das peças
+            p.exists = true;                    // A peça volta a existir
+            p.alpha = 1.0;                      // E volta a aparecer, opaca
+            p.position = vec3();                // Reseta: posição no mundo;
+            p.scale = vec3( direction, 1.0, 1.0 );  // escala da peça;
+            p.translation = mat4();             // matriz pessoal de translação;
+            p.rotation = mat4();                // idem, para rotação;
+            p.scaling = mat4();                 // idem, para escala;
+            p.matrix = mat4();                  // junção das três acima;
+            p.hasToUpdateMatrix = true;         // e precisamos recriar tudo.
+            p.location = vec2(p.originalLocation[0], p.originalLocation[1]);    // Posição no tabuleiro em casas
+            
+            
+            // Translada a peça para o lugar certo
+            var loc = boardToWorld(p.location);
+            p.setPosition(loc);
+            // Escala a peça para o tamanho certo e muda ela de direção se necessário
+            p.rescale(size, size, size);
+        }
+    }
+}
 
 
 
@@ -536,19 +536,29 @@ function piece (team, x, y) {
 
 
 /*  Jogadas */
+// Lê uma sequência de jogadas de um PGN e cria o vetor de jogadas
+function readPlays (string) {
+    
+}
+
+
 // Cria uma nova jogada e insere ela na fila
-function newPlay (/*int*/ string) {
-    var p = ({piece: objects[0].instances[0],           // Peça que vai se mover
+function newPlay (x, y) {
+    var p = ({objectIndex: 0,                           // Índice do objeto da peça que vai se mover
+             instanceIndex: 0,                          // Índice de instância dela
+             piece: 0,
              bOrigin: objects[0].instances[0].location, // Origem no tabuleiro
-             bDestination: vec2(string, string),        // Destino no tabuleiro
+             bDestination: vec2(x, y),        // Destino no tabuleiro
              wOrigin: objects[0].instances[0].position, // Origem no mundo
-             wDestination: boardToWorld(vec2(string, string)),     // Destino no mundo
+             wDestination: boardToWorld(vec2(x, y)),     // Destino no mundo
              direction: vec3(),                         // Vetor unitário de direção (no mundo)
              
              init:initPlay,                             // Inicializa as informações de acordo com
                                                         // a situação instantânea do tabuleiro
              
-             deadPiece: objects[0].instances[27],
+             deadObjectIndex: 0,
+             deadInstanceIndex: 27,
+             deadPiece: 0,
              });
     
     
@@ -556,8 +566,18 @@ function newPlay (/*int*/ string) {
     plays.push(p);
 }
 
-
+// Inicializa os valores da jogada que precisam ser pegos na hora
 function initPlay() {
+    // Pega a peça principal e a peça comida
+    this.piece = objects[this.objectIndex].instances[this.instanceIndex];
+    this.deadPiece = objects[this.deadObjectIndex].instances[this.deadInstanceIndex];
+    
+    
+    // Seta os valores que precisar
+    this.bOrigin = this.piece.location;
+    this.wOrigin = this.piece.position;
+    
+    
     // Cria o vetor de direção e normaliza ele
     this.direction = vec3(this.wDestination[0] - this.wOrigin[0], this.wDestination[1] - this.wOrigin[1], this.wDestination[2] - this.wOrigin[2]);
     
@@ -568,11 +588,12 @@ function initPlay() {
 
 // Roda a primeira jogada da fila
 function runPlays () {
-    if (playbackIsPlaying == true) {
-        // Se ainda tem alguma jogada para rodar
-        if (plays.length > 0) {
-            // Se estamos começando uma nova jogada
-            if (isPlaying == 0) {
+    if (playbackIsPlaying == true) {            // Roda só se não estiver pausado
+
+        if (playIndex < plays.length) {         // Se ainda tem alguma jogada para rodar
+
+            if (isPlaying == 0) {               // Se estamos começando uma nova jogada
+                
                 // Time vai ser o instante em que a jogada começou
                 time = (new Date()).getTime();
                 
@@ -580,13 +601,13 @@ function runPlays () {
                 isPlaying = 1;
                 
                 // Inicializa a jogada
-                plays[0].init();
+                plays[playIndex].init();
                 
             }
-            // Se estamos no meio de uma jogada
-            else {
+
+            else {                              // Se estamos no meio de uma jogada
                 // Pega a próxima jogada a executar e a peça dela
-                var play = plays[0];
+                var play = plays[playIndex];
                 var piece = play.piece;
                 
                 // Pega o intervalo de tempo passado desde a última atualização
@@ -608,8 +629,9 @@ function runPlays () {
                 if (norm3(limit) < 1.0 && play.deadPiece != 0) {
                     play.deadPiece.alpha -= dt;
                 }
-                // Se vamos andar (desloc) mais do que podemos (limit)
-                if (norm3(desloc) > norm3(limit)) {
+                
+                
+                if (norm3(desloc) > norm3(limit)) {     // Se vamos andar (desloc) mais do que podemos (limit)
                     // Então só vamos andar até onde der
                     desloc = limit;
                     
@@ -620,22 +642,20 @@ function runPlays () {
                     isPlaying = 0;
                     
                 }
-                // Se ainda não acabou
-                else {
-                    // Translada a peça naquela direção
+                else {                      // Se ainda não acabou
+                    // Translada a peça um pouco naquela direção
                     piece.translate(desloc[0], desloc[1], desloc[2]);
-                    
                 }
                 
-                // Se a jogada já acabou
-                if (isPlaying == 0) {
-                    // Retiramos ela do vetor
-                    plays.shift();
+                
+                
+
+                if (isPlaying == 0) {       // Se a jogada já acabou
+                    // Vamos para a próxima jogada
+                    playIndex++;
                     
-                    // Remove a peça morta do vetor, caso exista
-                    var index;
-                    if ((index = objects[0].instances.indexOf(play.deadPiece)) != -1)
-                        objects[0].instances.splice(index,1);
+                    // Remove a peça morta do tabuleiro, caso haja alguma
+                    play.deadPiece.exists = false;
                 }
                 
             }
@@ -643,23 +663,13 @@ function runPlays () {
     }
 }
 
-// Returns a world coordinate from a board coordinate
-function boardToWorld(loc) {
-    return vec3(0.09 * (-3.5 + loc[0]), 0.0, 0.09 * (-3.5 + loc[1]));
-}
 
 
 
 
 
-function sleep(milliseconds) {
-    var start = new Date().getTime();
-    while (1) {
-        if ((new Date().getTime() - start) > milliseconds){
-            break;
-        }
-    }
-}
+
+
 
 
 
@@ -811,6 +821,22 @@ function quatRot(q, v, t) {
 }
 
 
+// Transforma uma coordenada do tabuleiro numa de mundo
+function boardToWorld(loc) {
+    return vec3(0.09 * (-3.5 + loc[0]), 0.0, 0.09 * (-3.5 + loc[1]));
+}
+
+
+
+// Dorme por 'milliseconds' segundos
+function sleep(milliseconds) {
+    var start = new Date().getTime();
+    while (1) {
+        if ((new Date().getTime() - start) > milliseconds){
+            break;
+        }
+    }
+}
 
 
 
@@ -892,6 +918,22 @@ function rescale(x, y, z) {
     this.scale[0] *= x;
     this.scale[1] *= y;
     this.scale[2] *= z;
+    
+    this.scaling = [
+                    vec4(  this.scale[0],  0,  0,  0 ),
+                    vec4(  0,  this.scale[1],  0,  0 ),
+                    vec4(  0,  0,  this.scale[2],  0 ),
+                    vec4(  0,  0,  0,  1 )
+                    ];
+    
+    this.hasToUpdateMatrix = true;
+}
+
+function setScale(x, y, z) {
+    // Análogo ao método acima
+    this.scale[0] = x;
+    this.scale[1] = y;
+    this.scale[2] = z;
     
     this.scaling = [
                     vec4(  this.scale[0],  0,  0,  0 ),
@@ -1022,8 +1064,62 @@ function finalizeRotation() {
 }
 
 
+// Atualiza o eye, com base no eye absoluto e no tamanho da janela
+function updateEye() {
+    // Redimensiona baseado na menor dimensão
+    var minNovo = Math.min(canvas.clientHeight, canvas.clientWidth);
+    minNovo = Math.max(minNovo, 1);                 // Para não dividir por 0
+    
+    // Pega a razão de zoom
+    var ratio = 512/minNovo;
+    
+    // Aplica ao zoom absoluto
+    eye = vec3(eyeAbs[0] * ratio, eyeAbs[1] * ratio, eyeAbs[2] * ratio);
+    
+    // Manda o lookat se atualizar
+    hasToUpdateLookAt = true;
+}
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* MATRIZES DE PROJEÇÃO */
+// Cria e seta a matriz de perspectiva
+function updatePerspective() {
+    projec = perspective(70, canvas.width/canvas.height, 2.0, 0.0001);
+}
+
+// Idem, para a ortogonal
+function updateOrthogonal() {
+    projec = ortho(-1, 1, -1, 1, -0.1, -4.1);
+}
 
 
 
@@ -1061,6 +1157,36 @@ function finalizeRotation() {
 
 /* CALLBACKS */
 
+// Lida com o redimensionamento da tela
+function resizeCanvas() {
+    // Guarda os valores anteriores
+    var wAntigo = canvas.width;
+    var hAntigo = canvas.height;
+    
+    // Pega o novo tamanho da nossa janela
+    if (canvas.width != canvas.clientWidth || canvas.height != canvas.clientHeight) {
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
+    }
+    
+    // Redimensiona o tamanho do viewPort
+    gl.viewport( 0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight );
+    
+    // Arruma a projeção
+    if (projectionType == "Ortho") {
+        updateOrthogonal();
+    }
+    else {
+        updatePerspective();
+    }
+    
+    
+    // Arruma o zoom
+    updateEye();
+    
+}
+
+// Lida com o botão do mouse sendo apertado
 function handleMouseDown(event) {
     // Seta a flag dizendo para outras funções que o botão
     // está apertado
@@ -1071,11 +1197,13 @@ function handleMouseDown(event) {
     lastMouseY = event.clientY;
 }
 
+// Lida com o botão do mouse sendo solto
 function handleMouseUp(event) {
     // Reseta a flag
     mouseDown = false;
 }
 
+// Lida com o mouse se movendo
 function handleMouseMove(event) {
     // Só vamos rodar se o botão estiver apertado
     if (!mouseDown) return;
@@ -1166,8 +1294,8 @@ function render() {
     for (var i = 0; i < objects.length; i++) {
         // e para cada peça desse tipo
         for (var j = 0; j < objects[i].instances.length; j++) {
-            // Se a peça ainda não foi comida
-            if (objects[i].instances[j].exists) {
+            // Se a peça ainda não foi removida do tabuleiro
+            if (objects[i].instances[j].exists == true) {
                 // Manda para o shader a matriz a ser aplicada (projeção x view x model)
                 gl.uniformMatrix4fv(matrixLoc, false, flatten(times(projec, times(lookat, objects[i].instances[j].getMatrix()))));
                 
@@ -1203,3 +1331,4 @@ function render() {
 
 
 // COMO MUDAR O TAMANHO DA CAIXA
+// - Acertar o zoom inicial, se o acima for possível
