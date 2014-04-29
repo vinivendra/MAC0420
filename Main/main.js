@@ -48,7 +48,8 @@ var isPlaying = 0;
 var rotation = mat4();
 
 // Variáveis usadas no lookat
-var eye = vec3();
+var eyeAbs = vec3();                // Eye "absoluto", sem considerar o tamanho da janela
+var eye = vec3();                   // Eye obtido em função de eyeAbs, mas consideranro o tamanho
 var at = vec3();
 var up = vec3();
 var lookat = mat4();
@@ -206,7 +207,7 @@ window.onload = function init()
     var radius = 1;
     var theta = 45;
     var phi = 45;
-    eye = vec3(radius * Math.cos(theta), radius * Math.sin(theta) * Math.cos(phi), radius * Math.sin(theta) * Math.sin(phi));
+    eyeAbs = vec3(radius * Math.cos(theta), radius * Math.sin(theta) * Math.cos(phi), radius * Math.sin(theta) * Math.sin(phi));
     at = vec3(0.0, 0.0, 0.0);
     up = vec3(0.0, 1.0, 0.0);
     
@@ -291,7 +292,6 @@ function resizeCanvas() {
     
     // Pega o novo tamanho da nossa janela
     if (canvas.width != canvas.clientWidth || canvas.height != canvas.clientHeight) {
-        console.log("Resize: ", canvas.width, canvas.height);
         canvas.width = canvas.clientWidth;
         canvas.height = canvas.clientHeight;
         console.log("Novo: ", canvas.clientWidth, canvas.clientHeight);
@@ -310,17 +310,26 @@ function resizeCanvas() {
     
     
     // Arruma o zoom
-    var minAntigo = Math.min(wAntigo, hAntigo);
-    var minNovo = Math.min(canvas.clientHeight, canvas.clientWidth);
-    var r = minAntigo/minNovo;
-    eye = vec3(eye[0] * r, eye[1] * r, eye[2] * r);
-    hasToUpdateLookAt = true;
+    updateEye();
     
 }
 
 
 
-
+function updateEye() {
+    // Redimensiona baseado na menor dimensão
+    var minNovo = Math.min(canvas.clientHeight, canvas.clientWidth);
+    minNovo = Math.max(minNovo, 1);                 // Para não dividir por 0
+    
+    // Pega a razão de zoom
+    var r = 512/minNovo;
+    
+    // Aplica ao zoom absoluto
+    eye = vec3(eyeAbs[0] * r, eyeAbs[1] * r, eyeAbs[2] * r);
+    
+    // Manda o lookat se atualizar
+    hasToUpdateLookAt = true;
+}
 
 
 
@@ -998,13 +1007,15 @@ function RotTrackball(v) {
 
 // Joga a matriz de rotação para os vetores do lookat
 function finalizeRotation() {
-    // Roda o eye e o up do LookAt
+    // Roda o eyeAbs e o up do LookAt
     if (hasToUpdateLookAt) {
-        eye = timesMV3(rotation, eye);
-        up = timesMV3(rotation, up);
-        rotation = mat4();
+        eyeAbs = timesMV3(rotation, eyeAbs);    // Roda o eye absoluto
+        updateEye();                            // Calcula o eye baseado no eyeAbs e
+                                                // no tamanho da janela
+        up = timesMV3(rotation, up);            // Calcula o Up
+        rotation = mat4();                      // Zera a rotação, que não é cumulativa
         
-        lookat = lookAt(eye, at, up);
+        lookat = lookAt(eye, at, up);           // Calcula o lookat
         
         hasToUpdateLookAt = false;
     }
@@ -1080,7 +1091,7 @@ function handleMouseMove(event) {
     // Se estamos dando zoom
     if (event.shiftKey) {
         var dy = 1 - deltaY/screenHeight;
-        eye = vec3(eye[0] * dy, eye[1] * dy, eye[2] * dy);
+        eyeAbs = vec3(eyeAbs[0] * dy, eyeAbs[1] * dy, eyeAbs[2] * dy);
         hasToUpdateLookAt = true;
     }
     // Se estamos girando a cena
@@ -1191,3 +1202,4 @@ function render() {
 
 
 
+// COMO MUDAR O TAMANHO DA CAIXA
