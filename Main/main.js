@@ -453,11 +453,16 @@ function initObjects() {
     objects.push(rooks);
     k++;
 
+    // Os cavalos precisam ser girados em 90 graus
     var knights = {string: objStrings[k], vertexStart: 0, vertexEnd: 0, instances: []};
     knights.instances.push(piece(0, 1, 0));
+    knights.instances[knights.instances.length - 1].rotateY(90);
     knights.instances.push(piece(0, 6, 0));
+    knights.instances[knights.instances.length - 1].rotateY(90);
     knights.instances.push(piece(1, 1, 7));
+    knights.instances[knights.instances.length - 1].rotateY(90);
     knights.instances.push(piece(1, 6, 7));
+    knights.instances[knights.instances.length - 1].rotateY(90);
     objects.push(knights);
     k++;
     
@@ -532,6 +537,8 @@ function piece (team, x, y) {
                  translate: translate,              // Funções de transformação geométrica
                  setPosition: setPosition,          // Equivale a uma translação
                  rescale: rescale,
+                 setScale: setScale,
+                 rotateY: rotateY,                  // Roda a peça no eixo y
                  getMatrix: getMatrix               // Devolve a 'matrix'
                  });
     
@@ -729,6 +736,7 @@ function runPlays () {
                     
                     // Remove a peça morta do tabuleiro, caso haja alguma
                     play.deadPiece.exists = false;
+                    play.deadPiece.location = vec2(-1, -1);
                 }
                 
             }
@@ -737,6 +745,10 @@ function runPlays () {
 }
 
 
+// Acha a peça a ser movida, a que está na posição x, y do tabuleiro
+function getPiece(x, y) {
+    
+}
 
 
 
@@ -896,7 +908,7 @@ function quatRot(q, v, t) {
 
 // Transforma uma coordenada do tabuleiro numa de mundo
 function boardToWorld(loc) {
-    return vec3(0.09 * (-3.5 + loc[0]), 0.0, 0.09 * (-3.5 + loc[1]));
+    return vec3(0.09 * (-3.5 + loc[0]), 0.0, 0.09 * (+3.5 - loc[1]));
 }
 
 
@@ -1009,6 +1021,21 @@ function setScale(x, y, z) {
                     vec4(  this.scale[0],  0,  0,  0 ),
                     vec4(  0,  this.scale[1],  0,  0 ),
                     vec4(  0,  0,  this.scale[2],  0 ),
+                    vec4(  0,  0,  0,  1 )
+                    ];
+    
+    this.hasToUpdateMatrix = true;
+}
+
+function rotateY(t) {
+    var a = radians(t);
+    var s = Math.sin(a);
+    var c = Math.cos(a);
+    
+    this.rotation = [
+                    vec4(  c,  0, -s,  0 ),
+                    vec4(  0,  1,  0,  0 ),
+                    vec4(  s,  0,  c,  0 ),
                     vec4(  0,  0,  0,  1 )
                     ];
     
