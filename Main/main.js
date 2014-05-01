@@ -57,6 +57,8 @@ var at = vec3();
 var up = vec3();
 var lookat = mat4();
 
+var orthoZoom = 0.5;                // Variável usada para compensar a falta de zoom da projeção ortogonal
+
 var hasToUpdateLookAt = true;       // Flag para saber se é necessário
                                     // recalcular a componente de rotação da lookat;
 
@@ -128,14 +130,6 @@ window.onload = function init()
     
     
     // Lê os *.obj
-//    readObj('Peças/torre.obj');
-//    readObj('Peças/cavalo.obj');
-//    readObj('Peças/bispo.obj');
-//    readObj('Peças/rei.obj');
-//    readObj('Peças/rainha.obj');
-//    readObj('Peças/peao.obj');
-
-    console.log("StartInit");
 
     readObj('Pecas/torre.obj');
     readObj('Pecas/cavalo.obj');
@@ -150,8 +144,6 @@ window.onload = function init()
 
 function finishInit() {
     
-    console.log("Finish Init");
-
     // Inicializa as informações das peças
     initObjects();
     
@@ -159,10 +151,6 @@ function finishInit() {
     for (var i = 0; i < objects.length; i++) {
         readVertices(objects[i]);
         readFaces(objects[i]);
-    }
-    
-    for (var i = 0; i < objects.length; i++) {
-        console.log("Object ", i, ": ", objects[i].vertexStart, objects[i].vertexEnd);
     }
     
     // Liga os callbacks do mouse
@@ -391,7 +379,6 @@ function readVertices(piece) {
         vertices.push( vertex );
     }
     
-    console.log("Vertices: ", i);
 }
 
 // Lê as faces, ou seja, os grupos de vértices correspondentes
@@ -451,7 +438,6 @@ function readFaces(piece) {
     piece.vertexEnd = points.length;
     
     verticesStart = vertices.length;
-    console.log("Faces: ", i);
 }
 
 // Inicializa as peças, com todas as informações necessárias
@@ -1202,7 +1188,7 @@ function updatePerspective() {
 
 // Idem, para a ortogonal
 function updateOrthogonal() {
-    projec = ortho(-1, 1, -1, 1, -0.1, -4.1);
+    projec = ortho(orthoZoom * -canvas.width/canvas.height, orthoZoom * canvas.width/canvas.height, orthoZoom * -1, orthoZoom * 1, orthoZoom * -4.1, orthoZoom * -0.1);
 }
 
 
@@ -1304,6 +1290,8 @@ function handleMouseMove(event) {
     if (event.shiftKey) {
         var dy = 1 - deltaY/screenHeight;
         eyeAbs = vec3(eyeAbs[0] * dy, eyeAbs[1] * dy, eyeAbs[2] * dy);
+        orthoZoom *= dy;
+        if (projectionType == "Ortho") { updateOrthogonal(); }
         hasToUpdateLookAt = true;
     }
     // Se estamos girando a cena
