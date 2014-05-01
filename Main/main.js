@@ -1188,7 +1188,14 @@ function updatePerspective() {
 
 // Idem, para a ortogonal
 function updateOrthogonal() {
-    projec = ortho(orthoZoom * -canvas.width/canvas.height, orthoZoom * canvas.width/canvas.height, orthoZoom * -1, orthoZoom * 1, orthoZoom * -4.1, orthoZoom * -0.1);
+    // Redimensiona baseado na menor dimensão
+    var minNovo = Math.min(canvas.clientHeight, canvas.clientWidth);
+    minNovo = Math.max(minNovo, 1);                 // Para não dividir por 0
+    
+    // Pega a razão de zoom
+    var ratio = 512/minNovo;
+    
+    projec = ortho(orthoZoom * ratio * -canvas.width/canvas.height, orthoZoom * ratio * canvas.width/canvas.height, orthoZoom * ratio * -1, orthoZoom * ratio * 1, orthoZoom * ratio * -4.1, orthoZoom * ratio * -0.1);
 }
 
 
