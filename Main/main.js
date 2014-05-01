@@ -228,8 +228,8 @@ function finishInit() {
     
     
     // Inicializa o vetor de jogadas (nao deve ficar aqui)
-    newPlay(5);
-    newPlay(3);
+    newPlay(0, 0, 0, 7);
+    newPlay(0, 7, 5, 5);
     runPlays();
     
     
@@ -623,22 +623,24 @@ function resetObjects() {
 
 /*  Jogadas */
 // Cria uma nova jogada e insere ela na fila
-function newPlay (/*int*/ string) {
-    var p = ({objectIndex: 0,                           // Índice do objeto da peça que vai se mover
-             instanceIndex: 0,                          // Índice de instância dela
-             piece: 0,
-             bOrigin: objects[0].instances[0].location, // Origem no tabuleiro
-             bDestination: vec2(string, string),        // Destino no tabuleiro
-             wOrigin: objects[0].instances[0].position, // Origem no mundo
-             wDestination: boardToWorld(vec2(string, string)),     // Destino no mundo
+function newPlay (fromX, fromY, toX, toY) {
+    
+    var p = ({objectIndex: -1,                          // Índice de objeto da peça que vai se mover
+             instanceIndex: -1,                         // Índice de instância dela
+             piece: 0,                                  // A peça em si
+             
+             bOrigin: vec2(fromX, fromY),               // Origem no tabuleiro
+             bDestination: vec2(toX, toY),              // Destino no tabuleiro
+             wOrigin: boardToWorld(vec2(fromX, fromY)), // Origem no mundo
+             wDestination: boardToWorld(vec2(toX, toY)),// Destino no mundo
              direction: vec3(),                         // Vetor unitário de direção (no mundo)
              
              init:initPlay,                             // Inicializa as informações de acordo com
                                                         // a situação instantânea do tabuleiro
              
-             deadObjectIndex: 0,
-             deadInstanceIndex: 0,
-             deadPiece: 0,
+             deadObjectIndex: -1,                       // Índice de objeto da peça que vai ser comida
+             deadInstanceIndex: -1,                     // Índice de instância dela
+             deadPiece: null,                           // A peça em si
              });
     
     
@@ -649,8 +651,24 @@ function newPlay (/*int*/ string) {
 // Inicializa os valores da jogada que precisam ser pegos na hora
 function initPlay() {
     // Pega a peça principal e a peça comida
+    var pieceIndexes = getPiece(this.bOrigin[0], this.bOrigin[1]);
+    var deadPieceIndexes = getPiece(this.bDestination[0], this.bDestination[1]);
+    
+    // Se não tivermos uma peça
+    if (pieceIndexes[0] == -1)
+        console.log("ERRO! Não existe peça na posição ", fromX, fromY);
+    
+    this.objectIndex = pieceIndexes[0];
+    this.instanceIndex = pieceIndexes[1];
+    this.deadObjectIndex = deadPieceIndexes[0];
+    this.deadInstanceIndex = deadPieceIndexes[1];
+    
+    
     this.piece = objects[this.objectIndex].instances[this.instanceIndex];
-    this.deadPiece = objects[this.deadObjectIndex].instances[this.deadInstanceIndex];
+    if (this.deadObjectIndex == -1)
+        this.deadPiece = null;
+    else
+        this.deadPiece = objects[this.deadObjectIndex].instances[this.deadInstanceIndex];
     
     
     // Seta os valores que precisar
@@ -706,7 +724,7 @@ function runPlays () {
                 
                 
                 // Se estamos nos aproximando de uma peça a ser comida
-                if (norm3(limit) < 1.0 && play.deadPiece != 0) {
+                if (norm3(limit) < 1.0 && play.deadPiece != null) {
                     play.deadPiece.alpha -= dt;
                 }
                 
@@ -731,12 +749,17 @@ function runPlays () {
                 
 
                 if (isPlaying == 0) {       // Se a jogada já acabou
-                    // Vamos para a próxima jogada
-                    playIndex++;
+                    // Arruma a posição da peça no tabuleiro
+                    piece.location = play.bDestination;
                     
                     // Remove a peça morta do tabuleiro, caso haja alguma
-                    play.deadPiece.exists = false;
-                    play.deadPiece.location = vec2(-1, -1);
+                    if (play.deadObjectIndex != -1) {
+                        play.deadPiece.exists = false;
+                        play.deadPiece.location = vec2(-1, -1);
+                    }
+                    
+                    // Vamos para a próxima jogada
+                    playIndex++;
                 }
                 
             }
@@ -745,9 +768,23 @@ function runPlays () {
 }
 
 
-// Acha a peça a ser movida, a que está na posição x, y do tabuleiro
+// Acha a peça a ser movida, a que está na posição (x,y) do tabuleiro
+// Retorna o seu índice no vetor objects e no vetor instances,
+// para podermos achar a peça mesmo que o vetor mude
 function getPiece(x, y) {
+    // Para cada peça
+    for (var i = 0; i < objects.length; i++) {
+        for (var j = 0; j < objects[i].instances.length; j++) {
+            
+            var piece = objects[i].instances[j];
+            // Se a peça está na posição (x,y) do tabuleiro
+            if (piece.location[0] == x && piece.location[1] == y) {
+                return vec2(i, j);
+            }
+        }
+    }
     
+    return vec2(-1, -1);
 }
 
 
