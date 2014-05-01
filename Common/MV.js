@@ -637,9 +637,11 @@ function flatten( v )
     if ( elemsAreArrays ) {
         var idx = 0;
         for ( var i = 0; i < v.length; ++i ) {
-            for ( var j = 0; j < v[i].length; ++j ) {
-                floats[idx++] = v[i][j];
-            }
+//            if (!(typeof v[i] === 'undefined')) {
+                for ( var j = 0; j < v[i].length; ++j ) {
+                    floats[idx++] = v[i][j];
+                }
+//            }
         }
     }
     else {
