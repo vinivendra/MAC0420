@@ -804,8 +804,9 @@ function piece (team, x, y, type) {
     
     // Cria a peça
     var piece = ({
-                 exists: true,                     // Se a peça ainda existe
+                 exists: true,                      // Se a peça ainda existe
                  color: team,                       // O time da peça
+                 type: type,                        // O tipo da peça (rei, rainha, etc)
                  position: vec3(),                  // Posição no mundo
                  scale: vec3( direction, 1.0, 1.0 ),// Escala da peça
                  translation: mat4(),               // Matriz pessoal de translação
@@ -937,21 +938,27 @@ function newPlay (fromX, fromY, toX, toY) {
 
 // Inicializa os valores da jogada que precisam ser pegos na hora
 function initPlay() {
-    // Pega a peça principal e a peça comida
+    // Pega a peça principal
     var pieceIndexes = getPiece(this.bOrigin[0], this.bOrigin[1]);
-    var deadPieceIndexes = getPiece(this.bDestination[0], this.bDestination[1]);
     
     // Se não tivermos uma peça
     if (pieceIndexes[0] == -1)
         console.log("ERRO! Não existe peça na posição ", this.bOrigin);
     
+    // Se tivermos
     this.objectIndex = pieceIndexes[0];
     this.instanceIndex = pieceIndexes[1];
+    
+    this.piece = objects[this.objectIndex].instances[this.instanceIndex];
+    
+    
+    
+    // Pega a peça morta
+    var deadPieceIndexes = getPiece(this.bDestination[0], this.bDestination[1]);
+    
     this.deadObjectIndex = deadPieceIndexes[0];
     this.deadInstanceIndex = deadPieceIndexes[1];
     
-    
-    this.piece = objects[this.objectIndex].instances[this.instanceIndex];
     if (this.deadObjectIndex == -1)
         this.deadPiece = null;
     else
