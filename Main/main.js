@@ -592,7 +592,12 @@ function readTabFaces(string) {
     while (string.charAt(i) != '\n') i++;
     i++;
     
-    var c = 0.3;
+    var c = [vec4(144/256, 103/256, 68/256), // Tab cor 1
+             vec4(144/256, 103/256, 68/256), // Tab cor 2
+             vec4(230/256, 217/256, 196/256), // Casas cor 1
+             vec4(123/256, 58/256, 50/256), // Casas cor 2
+             ];
+    var count = 0;
     
     // Para cada face
     while (string.charAt(i) == 'f' || string.charAt(i) == 'u') {
@@ -627,14 +632,13 @@ function readTabFaces(string) {
                 points.push(vertices[verticesStart + number[k]]);
             
             // Adiciona as cores ao vetor de cores
-            var col = vec4(c, c, c, 1.0);
-            colors.push(col);
-            colors.push(col);
-            colors.push(col);
+            colors.push(c[count]);
+            colors.push(c[count]);
+            colors.push(c[count]);
         }
         // Se vamos mudar de material
         else if (string.charAt(i) == 'u') {
-            c += 0.1;
+            count++;
             
             // Vai até a próxima linha
             while (string.charAt(i) != '\n') i++;

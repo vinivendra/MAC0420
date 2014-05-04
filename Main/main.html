@@ -27,15 +27,23 @@
                     //Pretas:
                     //    0.6 * vPosition.y;
                     
-                    if (isBoard)
-                        color = vColor;
+                    if (isBoard) {
+                        float c = (vPosition[0] + vPosition[1] + vPosition[2]) / 3.0;
+                        color = vColor - 0.05 * vec4(c, c, c, 0.0);
+                    }
                     
                     else {
-                        if (team)
-                        color = 0.6 * vColor;
+                        if (team) {
+                            vec4 col = vec4(69.0/256.0, 44.0/256.0, 34.0/256.0, 1.0);
+                            float c = (vPosition[0] + vPosition[1] + vPosition[2]) / 3.0;
+                            color = col + 1.5 * c;
+                        }
                         
-                        else
-                        color = 0.6 + 0.5 * vColor;
+                        else {
+                            vec4 col = vec4(193.0/256.0, 165.0/256.0, 119.0/256.0, 1.0);
+                            float c = (vPosition[0] + vPosition[1] + vPosition[2]) / 3.0;
+                            color = col + 1.5 * c;
+                        }
                         
                         color.w = 1.0;
                     }
