@@ -45,9 +45,10 @@ var playIndex = 0;
 var isPlaying = 0;
 // Variável para contar o tempo do intervalo entre uma jogada e outro
 var playIntervalTime = 0;
-// Variável para saber a posição de um possível en passant
-var enPassantLocation = vec2(-1, -1);
 
+// Variáveis para saber a posição de um possível en passant
+var enPassantLocation = vec2(-1, -1);
+var enPassantPawnLocation = vec2(-1, -1);
 
 
 
@@ -269,90 +270,96 @@ function finishInit() {
     
     // Inicializa o vetor de jogadas (nao deve ficar aqui)
     newPlay(5,2,5,4);
+    newPlay(5,8,5,3);
+    newPlay(5,2,5,4);
     newPlay(5,7,5,5);
-    newPlay(7,1,6,3);
-    newPlay(2,8,3,6);
-    newPlay(6,1,2,5);
-    newPlay(1,7,1,6);
-    newPlay(2,5,1,4);
-    newPlay(7,8,6,6);
-    newPlay(5,1,7,1);
-    newPlay(6,8,5,7);
-    newPlay(6,1,5,1);
-    newPlay(2,7,2,5);
-    newPlay(1,4,2,3);
-    newPlay(4,7,4,6);
-    newPlay(3,2,3,3);
-    newPlay(5,8,7,8);
-    newPlay(8,2,8,3);
-    newPlay(3,6,2,8);
-    newPlay(4,2,4,4);
-    newPlay(2,8,4,7);
-    newPlay(3,3,3,4);
-    newPlay(3,7,3,6);
-    newPlay(3,4,2,5);
-    newPlay(1,6,2,5);
-    newPlay(2,1,3,3);
-    newPlay(3,8,2,7);
-    newPlay(3,1,7,5);
-    newPlay(2,5,2,4);
-    newPlay(3,3,2,1);
-    newPlay(8,7,8,6);
-    newPlay(7,5,8,4);
-    newPlay(3,6,3,5);
-    newPlay(4,4,5,5);
-    newPlay(6,6,5,4);
-    newPlay(8,4,5,7);
-    newPlay(4,8,5,7);
-    newPlay(5,5,4,6);
-    newPlay(5,7,6,6);
-    newPlay(2,1,4,2);
-    newPlay(5,4,4,6);
-    newPlay(4,2,3,4);
-    newPlay(4,6,3,4);
-    newPlay(2,3,3,4);
-    newPlay(4,7,2,6);
-    newPlay(6,3,5,5);
-    newPlay(1,8,5,8);
-    newPlay(3,4,6,7);
-    newPlay(6,8,6,7);
-    newPlay(5,5,6,7);
-    newPlay(5,8,5,1);
-    newPlay(4,1,5,1);
-    newPlay(7,8,6,7);
-    newPlay(5,1,5,3);
-    newPlay(6,6,7,5);
-    newPlay(5,3,7,5);
-    newPlay(8,6,7,5);
-    newPlay(2,2,2,3);
-    newPlay(6,7,5,6);
-    newPlay(1,2,1,3);
-    newPlay(5,6,4,6);
-    newPlay(1,3,2,4);
-    newPlay(3,5,2,4);
-    newPlay(1,1,1,5);
-    newPlay(2,6,4,5);
-    newPlay(6,2,6,3);
-    newPlay(2,7,3,8);
-    newPlay(7,1,6,2);
-    newPlay(3,8,6,5);
-    newPlay(1,5,1,7);
-    newPlay(7,7,7,6);
-    newPlay(1,7,1,6);
-    newPlay(4,6,3,5);
-    newPlay(6,2,5,1);
-    newPlay(4,5,6,4);
-    newPlay(7,2,7,3);
-    newPlay(6,4,8,3);
-    newPlay(5,1,4,2);
-    newPlay(3,5,2,5);
-    newPlay(1,6,4,6);
-    newPlay(2,5,3,5);
-    newPlay(4,6,1,6);
-    newPlay(8,3,6,2);
-    newPlay(7,3,7,4);
-    newPlay(6,5,4,3);
-    newPlay(1,6,5,6);
+    
+    // Partida com 2 roques curtos
+//    newPlay(5,2,5,4);
+//    newPlay(5,7,5,5);
+//    newPlay(7,1,6,3);
+//    newPlay(2,8,3,6);
+//    newPlay(6,1,2,5);
+//    newPlay(1,7,1,6);
+//    newPlay(2,5,1,4);
+//    newPlay(7,8,6,6);
+//    newPlay(5,1,7,1);
+//    newPlay(6,8,5,7);
+//    newPlay(6,1,5,1);
+//    newPlay(2,7,2,5);
+//    newPlay(1,4,2,3);
+//    newPlay(4,7,4,6);
+//    newPlay(3,2,3,3);
+//    newPlay(5,8,7,8);
+//    newPlay(8,2,8,3);
+//    newPlay(3,6,2,8);
+//    newPlay(4,2,4,4);
+//    newPlay(2,8,4,7);
+//    newPlay(3,3,3,4);
+//    newPlay(3,7,3,6);
+//    newPlay(3,4,2,5);
+//    newPlay(1,6,2,5);
+//    newPlay(2,1,3,3);
+//    newPlay(3,8,2,7);
+//    newPlay(3,1,7,5);
+//    newPlay(2,5,2,4);
+//    newPlay(3,3,2,1);
+//    newPlay(8,7,8,6);
+//    newPlay(7,5,8,4);
+//    newPlay(3,6,3,5);
+//    newPlay(4,4,5,5);
+//    newPlay(6,6,5,4);
+//    newPlay(8,4,5,7);
+//    newPlay(4,8,5,7);
+//    newPlay(5,5,4,6);
+//    newPlay(5,7,6,6);
+//    newPlay(2,1,4,2);
+//    newPlay(5,4,4,6);
+//    newPlay(4,2,3,4);
+//    newPlay(4,6,3,4);
+//    newPlay(2,3,3,4);
+//    newPlay(4,7,2,6);
+//    newPlay(6,3,5,5);
+//    newPlay(1,8,5,8);
+//    newPlay(3,4,6,7);
+//    newPlay(6,8,6,7);
+//    newPlay(5,5,6,7);
+//    newPlay(5,8,5,1);
+//    newPlay(4,1,5,1);
+//    newPlay(7,8,6,7);
+//    newPlay(5,1,5,3);
+//    newPlay(6,6,7,5);
+//    newPlay(5,3,7,5);
+//    newPlay(8,6,7,5);
+//    newPlay(2,2,2,3);
+//    newPlay(6,7,5,6);
+//    newPlay(1,2,1,3);
+//    newPlay(5,6,4,6);
+//    newPlay(1,3,2,4);
+//    newPlay(3,5,2,4);
+//    newPlay(1,1,1,5);
+//    newPlay(2,6,4,5);
+//    newPlay(6,2,6,3);
+//    newPlay(2,7,3,8);
+//    newPlay(7,1,6,2);
+//    newPlay(3,8,6,5);
+//    newPlay(1,5,1,7);
+//    newPlay(7,7,7,6);
+//    newPlay(1,7,1,6);
+//    newPlay(4,6,3,5);
+//    newPlay(6,2,5,1);
+//    newPlay(4,5,6,4);
+//    newPlay(7,2,7,3);
+//    newPlay(6,4,8,3);
+//    newPlay(5,1,4,2);
+//    newPlay(3,5,2,5);
+//    newPlay(1,6,4,6);
+//    newPlay(2,5,3,5);
+//    newPlay(4,6,1,6);
+//    newPlay(8,3,6,2);
+//    newPlay(7,3,7,4);
+//    newPlay(6,5,4,3);
+//    newPlay(1,6,5,6);
     runPlays();
     
     
@@ -928,7 +935,7 @@ function newPlay (fromX, fromY, toX, toY) {
              
              deadPiece: null,                           // A peça em si
              
-             isEnPassant: false                         // Flag para saber se a jogada é um en passant
+             isEnPassant: false,                        // Flag para saber se a jogada é um en passant
              isDouble: false,                           // Flag para saber se a jogada é um roque
              secondPiece: null,                         // A torre em si
 
@@ -996,26 +1003,42 @@ function initPlay() {
     }
     
     
-//    // Se for um peão
-//    if (this.piece.job == 5) {
-//        // Checa se ele está andando duas casas
-//        if ((this.bDestination[1] - this.bOrigin[1] > 1) || (this.bDestination[1] - this.bOrigin[1] < -1)) {
-//            // Se estiver, está sujeito a um en passant
-//            enPassantLocation = vec2(this.bOrigin, (this.bDestination[1] + this.bOrigin[1]) / 2);
-//        }
-//    }
-//    // Se a jogada está sujeita a ser um en passant
-//    if (enPassantLocation[0] != -1) {
-//        // Se a peça está indo para aquele lugar
-//        if (this.bDestination[0] == enPassantLocation[0] && this.bDestination[1] == enPassantLocation[1]) {
-//            this.isEnPassant = true;
-//        }
-//    }
-    
-    
-    // Pega a peça morta
-    this.deadPiece = getPiece(this.bDestination[0], this.bDestination[1]);
-    
+    // Se for um peão
+    if (this.piece.job == 5) {
+        // Checa se ele está andando duas casas
+        if ((this.bDestination[1] - this.bOrigin[1] > 1) || (this.bDestination[1] - this.bOrigin[1] < -1)) {
+            // Se estiver, está sujeito a um en passant
+            // A peça seguinte deve ir para esta posição para fazer o en passant:
+            var y = (this.bDestination[1] + this.bOrigin[1]) / 2.0;
+            enPassantLocation = vec2(this.bOrigin[0], y);
+            console.log("Origem, destino, meio, media: ", this.bOrigin, this.bDestination, enPassantLocation, y);
+            // E se fizer vai comer este peão:
+            enPassantPawnLocation = this.bDestination;
+        }
+    }
+    // Se a jogada está sujeita a ser um en passant
+    else if (enPassantLocation[0] != -1) {
+        
+        console.log(enPassantLocation, this.bDestination);
+        // Se a peça está indo para aquele lugar
+        if (this.bDestination[0] == enPassantLocation[0] && this.bDestination[1] == enPassantLocation[1]) {
+            console.log("EN PASSANT!!");
+            
+            // A jogada é um en passant
+            this.isEnPassant = true;
+            
+            // Vai comer o peão:
+            this.deadPiece = getPiece(enPassantPawnLocation[0], enPassantPawnLocation[1]);
+        }
+        else {
+            enPassantLocation = vec2(-1, -1);
+            enPassantPawnLocation = vec2(-1, -1);
+        }
+    }
+    else {
+        // Em jogadas normais (nao-en-passant), a peça comida é a que está no destino
+        this.deadPiece = getPiece(this.bDestination[0], this.bDestination[1]);
+    }
     
     
     // Seta os valores que precisar
