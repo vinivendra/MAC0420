@@ -50,6 +50,8 @@ var playIntervalTime = 0;
 var enPassantLocation = vec2(-1, -1);
 var enPassantPawnLocation = vec2(-1, -1);
 
+// Vetor de peoes promovidos
+var promoted = [];
 
 
 
@@ -269,18 +271,21 @@ function finishInit() {
 
     
     // Inicializa o vetor de jogadas (nao deve ficar aqui)
-    newPlay(5,2,5,4);
-    newPlay(5,8,5,3);
-    newPlay(5,2,5,4);
-    newPlay(5,7,5,5);
     
-    // Partida com 2 roques curtos
+    // Exemplo de en passant
 //    newPlay(5,2,5,4);
-//    newPlay(5,7,5,5);
+//    newPlay(5,8,5,3);
 //    newPlay(7,1,6,3);
 //    newPlay(2,8,3,6);
-//    newPlay(6,1,2,5);
-//    newPlay(1,7,1,6);
+    
+    
+    // Partida com 2 roques curtos
+    newPlay(5,2,5,4,1);
+    newPlay(5,7,5,5,-1);
+    newPlay(7,1,6,3,-1);
+    newPlay(2,8,3,6,-1);
+    newPlay(6,1,2,5,-1);
+    newPlay(1,7,1,6,-1);
 //    newPlay(2,5,1,4);
 //    newPlay(7,8,6,6);
 //    newPlay(5,1,7,1);
@@ -832,7 +837,9 @@ function piece (team, x, y, job) {
                  rescale: rescale,
                  setScale: setScale,
                  rotateY: rotateY,                  // Roda a peça no eixo y
-                 getMatrix: getMatrix               // Devolve a 'matrix'
+                 getMatrix: getMatrix,              // Devolve a 'matrix'
+                 
+                 promotion: -1,                     // Se a peça foi promovida ou não
                  });
     
     
@@ -867,7 +874,6 @@ function resetObjects() {
             p.position = vec3();                // Reseta: posição no mundo;
             p.scale = vec3( direction, 1.0, 1.0 );  // escala da peça;
             p.translation = mat4();             // matriz pessoal de translação;
-            p.rotation = mat4();                // idem, para rotação;
             p.scaling = mat4();                 // idem, para escala;
             p.matrix = mat4();                  // junção das três acima;
             p.hasToUpdateMatrix = true;         // e precisamos recriar tudo.
@@ -879,7 +885,26 @@ function resetObjects() {
             p.setPosition(loc);
             // Escala a peça para o tamanho certo e muda ela de direção se necessário
             p.rescale(size, size, size);
+            
+            p.promotion = -1;
         }
+    }
+    
+    promoted = [];
+}
+
+
+// Promove um peão
+function promote(piece, i) {
+    piece.job = i;
+    piece.hasToUpdateMatrix = true;
+    piece.promotion = i;
+    promoted.push(piece);
+    
+    // Se for um cavalo, roda ele
+    if (i == 1) {
+        piece.rotation = mat4();
+        piece.rotateY(90);
     }
 }
 
@@ -913,10 +938,9 @@ function resetObjects() {
 
 
 
-
 /*  Jogadas */
 // Cria uma nova jogada e insere ela na fila
-function newPlay (fromX, fromY, toX, toY) {
+function newPlay (fromX, fromY, toX, toY, promotion) {
     fromX -= 1;
     fromY -= 1;
     toX -= 1;
@@ -935,6 +959,7 @@ function newPlay (fromX, fromY, toX, toY) {
              
              deadPiece: null,                           // A peça em si
              
+             promotion: promotion,                      // Indica a peça que um peão se torna se for promovido
              isEnPassant: false,                        // Flag para saber se a jogada é um en passant
              isDouble: false,                           // Flag para saber se a jogada é um roque
              secondPiece: null,                         // A torre em si
@@ -1011,7 +1036,6 @@ function initPlay() {
             // A peça seguinte deve ir para esta posição para fazer o en passant:
             var y = (this.bDestination[1] + this.bOrigin[1]) / 2.0;
             enPassantLocation = vec2(this.bOrigin[0], y);
-            console.log("Origem, destino, meio, media: ", this.bOrigin, this.bDestination, enPassantLocation, y);
             // E se fizer vai comer este peão:
             enPassantPawnLocation = this.bDestination;
         }
@@ -1019,10 +1043,8 @@ function initPlay() {
     // Se a jogada está sujeita a ser um en passant
     else if (enPassantLocation[0] != -1) {
         
-        console.log(enPassantLocation, this.bDestination);
         // Se a peça está indo para aquele lugar
         if (this.bDestination[0] == enPassantLocation[0] && this.bDestination[1] == enPassantLocation[1]) {
-            console.log("EN PASSANT!!");
             
             // A jogada é um en passant
             this.isEnPassant = true;
@@ -1039,6 +1061,9 @@ function initPlay() {
         // Em jogadas normais (nao-en-passant), a peça comida é a que está no destino
         this.deadPiece = getPiece(this.bDestination[0], this.bDestination[1]);
     }
+    
+    
+    
     
     
     // Seta os valores que precisar
@@ -1126,6 +1151,11 @@ function runPlays () {
                     // Se for um roque, coloca a torre no lugar certo também
                     if (play.isDouble)
                         play.secondPiece.setPosition(play.wSDestination);
+                    
+                    // Se foi um peão promovido, muda a peça
+                    if (play.promotion > -1) {
+                        promote(piece, play.promotion);
+                    }
                     
                 }
                 else {                      // Se ainda não acabou
@@ -1841,8 +1871,8 @@ function render() {
     for (var i = 0; i < objects.length; i++) {
         // e para cada peça desse tipo
         for (var j = 0; j < objects[i].instances.length; j++) {
-            // Se a peça ainda não foi removida do tabuleiro
-            if (objects[i].instances[j].exists == true) {
+            // Se a peça ainda não foi removida do tabuleiro e não é um peao promovido
+            if ((objects[i].instances[j].exists == true) && (objects[i].instances[j].promotion == -1)) {
                 // Manda para o shader a matriz a ser aplicada (projeção x view x model)
                 gl.uniformMatrix4fv(matrixLoc, false, flatten(times(projec, times(lookat, objects[i].instances[j].getMatrix()))));
                 
@@ -1852,6 +1882,18 @@ function render() {
                 // Desenha a peça atual
                 gl.drawArrays( gl.TRIANGLES, objects[i].vertexStart, objects[i].vertexEnd - objects[i].vertexStart);
             }
+        }
+    }
+    for (var i = 0; i < promoted.length; i++) {
+        if (promoted[i].exists == true) {
+            // Manda para o shader a matriz a ser aplicada (projeção x view x model)
+            gl.uniformMatrix4fv(matrixLoc, false, flatten(times(projec, times(lookat, promoted[i].getMatrix()))));
+            
+            // Manda também a cor da peça, para podermos passar a cor certa para o fragment shader
+            gl.uniform1f(teamLoc, promoted[i].color);
+            
+            // Desenha a peça atual
+            gl.drawArrays( gl.TRIANGLES, objects[promoted[i].promotion].vertexStart, objects[promoted[i].promotion].vertexEnd - objects[promoted[i].promotion].vertexStart);
         }
     }
     
