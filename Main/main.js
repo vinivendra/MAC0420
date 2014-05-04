@@ -45,7 +45,8 @@ var playIndex = 0;
 var isPlaying = 0;
 // Variável para contar o tempo do intervalo entre uma jogada e outro
 var playIntervalTime = 0;
-
+// Variável para saber a posição de um possível en passant
+var enPassantLocation = vec2(-1, -1);
 
 
 
@@ -742,58 +743,58 @@ function initObjects() {
     var k = 1;
     
     var rooks = {string: objStrings[k], vertexStart: 0, vertexEnd: 0, instances: []};
-    rooks.instances.push(piece(0, 0, 0, "rook"));
-    rooks.instances.push(piece(0, 7, 0, "rook"));
-    rooks.instances.push(piece(1, 0, 7, "rook"));
-    rooks.instances.push(piece(1, 7, 7, "rook"));
+    rooks.instances.push(piece(0, 0, 0, 0));
+    rooks.instances.push(piece(0, 7, 0, 0));
+    rooks.instances.push(piece(1, 0, 7, 0));
+    rooks.instances.push(piece(1, 7, 7, 0));
     objects.push(rooks);
     k++;
 
     // Os cavalos precisam ser girados em 90 graus
     var knights = {string: objStrings[k], vertexStart: 0, vertexEnd: 0, instances: []};
-    knights.instances.push(piece(0, 1, 0, "knight"));
+    knights.instances.push(piece(0, 1, 0, 1));
     knights.instances[knights.instances.length - 1].rotateY(90);
-    knights.instances.push(piece(0, 6, 0, "knight"));
+    knights.instances.push(piece(0, 6, 0, 1));
     knights.instances[knights.instances.length - 1].rotateY(90);
-    knights.instances.push(piece(1, 1, 7, "knight"));
+    knights.instances.push(piece(1, 1, 7, 1));
     knights.instances[knights.instances.length - 1].rotateY(90);
-    knights.instances.push(piece(1, 6, 7, "knight"));
+    knights.instances.push(piece(1, 6, 7, 1));
     knights.instances[knights.instances.length - 1].rotateY(90);
     objects.push(knights);
     k++;
     
     var bishops = {string: objStrings[k], vertexStart: 0, vertexEnd: 0, instances: []};
-    bishops.instances.push(piece(0, 2, 0, "bishop"));
-    bishops.instances.push(piece(0, 5, 0, "bishop"));
-    bishops.instances.push(piece(1, 2, 7, "bishop"));
-    bishops.instances.push(piece(1, 5, 7, "bishop"));
+    bishops.instances.push(piece(0, 2, 0, 2));
+    bishops.instances.push(piece(0, 5, 0, 2));
+    bishops.instances.push(piece(1, 2, 7, 2));
+    bishops.instances.push(piece(1, 5, 7, 2));
     objects.push(bishops);
     k++;
     
     var kings = {string: objStrings[k], vertexStart: 0, vertexEnd: 0, instances: []};
-    kings.instances.push(piece(0, 4, 0, "king"));
-    kings.instances.push(piece(1, 4, 7, "king"));
+    kings.instances.push(piece(0, 4, 0, 3));
+    kings.instances.push(piece(1, 4, 7, 3));
     objects.push(kings);
     k++;
     
     var queens = {string: objStrings[k], vertexStart: 0, vertexEnd: 0, instances: []};
-    queens.instances.push(piece(0, 3, 0, "queen"));
-    queens.instances.push(piece(1, 3, 7, "queen"));
+    queens.instances.push(piece(0, 3, 0, 4));
+    queens.instances.push(piece(1, 3, 7, 4));
     objects.push(queens);
     k++;
     
 
     var pawns = {string: objStrings[k], vertexStart: 0, vertexEnd: 0, instances: []};
     for (var i = 0; i < 8; i++) {
-        pawns.instances.push(piece(0, i, 1, "pawn"));
-        pawns.instances.push(piece(1, i, 6, "pawn"));
+        pawns.instances.push(piece(0, i, 1, 5));
+        pawns.instances.push(piece(1, i, 6, 5));
     }
     objects.push(pawns);
 }
 
 
 // Cria uma nova peça no time TEAM e na posição (X, Y) (medida em casas) do tabuleiro
-function piece (team, x, y, type) {
+function piece (team, x, y, job) {
     // Acha a direção para a qual a peça está olhando
     var direction;
     if (team) direction = -1.0;
@@ -806,7 +807,7 @@ function piece (team, x, y, type) {
     var piece = ({
                  exists: true,                      // Se a peça ainda existe
                  color: team,                       // O time da peça
-                 type: type,                        // O tipo da peça (rei, rainha, etc)
+                 job: job,                        // O tipo da peça (rei, rainha, etc)
                  position: vec3(),                  // Posição no mundo
                  scale: vec3( direction, 1.0, 1.0 ),// Escala da peça
                  translation: mat4(),               // Matriz pessoal de translação
@@ -826,6 +827,7 @@ function piece (team, x, y, type) {
                  rotateY: rotateY,                  // Roda a peça no eixo y
                  getMatrix: getMatrix               // Devolve a 'matrix'
                  });
+    
     
     // Translada a peça para o lugar certo
     var loc = boardToWorld(piece.location);
@@ -926,6 +928,7 @@ function newPlay (fromX, fromY, toX, toY) {
              
              deadPiece: null,                           // A peça em si
              
+             isEnPassant: false                         // Flag para saber se a jogada é um en passant
              isDouble: false,                           // Flag para saber se a jogada é um roque
              secondPiece: null,                         // A torre em si
 
@@ -954,28 +957,60 @@ function initPlay() {
         console.log("ERRO! Não existe peça na posição ", this.bOrigin);
     
     
-    
     // Se a peça for um rei
-    if (piece.type == "king") {
+    if (this.piece.job == 3) {
         // Se a jogada for um roque (se o rei se mover mais de uma casa)
-        if ((bDestination[0] - bOrigin[0] > 1) || (bDestination[0] - bOrigin[0] < -1)) {
-            var secondPieceIndexes;
+        if ((this.bDestination[0] - this.bOrigin[0] > 1) || (this.bDestination[0] - this.bOrigin[0] < -1)) {
+            this.isDouble = true;
             
-            if (bDestination[0] - bOrigin[0] > 1) {
-                this.secondPiece = getPiece(0, 7);
-                this.bSOrigin = vec2(0, 7);
-                this.wSOrigin = boardToWorld(vec2(0, 7));
+            if (this.bDestination[0] - this.bOrigin[0] > 1) {
+                // Pega a linha (brancas ou pretas?)
+                var i = this.bOrigin[1];
+                
+                // Pega a torre da direita
+                this.secondPiece = getPiece(7, i);
+                this.bSOrigin = vec2(7, i);
+                this.wSOrigin = boardToWorld(vec2(7, i));
+                this.bSDestination = vec2(5, i);
+                this.wSDestination = boardToWorld(vec2(5, i));
             }
             else {
-                this.secondPiece = getPiece(0, 0);
+                // Pega a linha (brancas ou pretas?)
+                var i = this.bOrigin[1];
                 
-                // PROJETAR O MOVIMENTO DA TORRE!
+                // Pega a torre da direita
+                this.secondPiece = getPiece(0, i);
+                this.bSOrigin = vec2(0, i);
+                this.wSOrigin = boardToWorld(vec2(0, i));
+                this.bSDestination = vec2(3, i);
+                this.wSDestination = boardToWorld(vec2(3, i));
             }
             
+            // Cria o vetor de direção e normaliza ele
+            this.sDirection = vec3(this.wSDestination[0] - this.wSOrigin[0], this.wSDestination[1] - this.wSOrigin[1], this.wSDestination[2] - this.wSOrigin[2]);
+            
+            var n = norm3(this.sDirection);
+            this.sDirection = vec3(this.sDirection[0]/n, this.sDirection[1]/n, this.sDirection[2]/n);
+            
         }
-        
-        console.log("Roque!");
     }
+    
+    
+//    // Se for um peão
+//    if (this.piece.job == 5) {
+//        // Checa se ele está andando duas casas
+//        if ((this.bDestination[1] - this.bOrigin[1] > 1) || (this.bDestination[1] - this.bOrigin[1] < -1)) {
+//            // Se estiver, está sujeito a um en passant
+//            enPassantLocation = vec2(this.bOrigin, (this.bDestination[1] + this.bOrigin[1]) / 2);
+//        }
+//    }
+//    // Se a jogada está sujeita a ser um en passant
+//    if (enPassantLocation[0] != -1) {
+//        // Se a peça está indo para aquele lugar
+//        if (this.bDestination[0] == enPassantLocation[0] && this.bDestination[1] == enPassantLocation[1]) {
+//            this.isEnPassant = true;
+//        }
+//    }
     
     
     // Pega a peça morta
@@ -1035,6 +1070,20 @@ function runPlays () {
                 
                 
                 
+                
+                // Checa se a jogada é um roque
+                var rookDesloc;
+                if (play.isDouble == true) {
+                    // Se for um roque longo, a torre precisa andar mais rápido
+                    if (play.bSOrigin[0] == 0)
+                        speed = 0.3;
+                    
+                    rookDesloc = vec3(play.sDirection[0] * speed * dt, play.sDirection[1] * speed * dt, play.sDirection[2] * speed * dt);
+                }
+                
+                
+                
+                
                 // Se estamos nos aproximando de uma peça a ser comida
                 if (norm3(limit) < 0.05 && play.deadPiece != null) {
                     play.deadPiece.exists = false;
@@ -1051,10 +1100,18 @@ function runPlays () {
                     // E essa jogada já acabou
                     isPlaying = 2;
                     
+                    // Se for um roque, coloca a torre no lugar certo também
+                    if (play.isDouble)
+                        play.secondPiece.setPosition(play.wSDestination);
+                    
                 }
                 else {                      // Se ainda não acabou
                     // Translada a peça um pouco naquela direção
                     piece.translate(desloc[0], desloc[1], desloc[2]);
+                    
+                    // Se for um roque, translada a torre também
+                    if (play.isDouble)
+                        play.secondPiece.translate(rookDesloc[0], rookDesloc[1], rookDesloc[2]);
                 }
                 
                 
@@ -1063,7 +1120,10 @@ function runPlays () {
                 if (isPlaying == 2) {       // Se a jogada já acabou
                     // Arruma a posição da peça no tabuleiro
                     piece.location = play.bDestination;
-                    
+                    // Se for roque, arruma a torre também
+                    if (play.isDouble)
+                        play.secondPiece.location = play.bSDestination;
+                        
                     // Remove a peça morta do tabuleiro, caso haja alguma
                     if (play.deadPiece != null) {
                         play.deadPiece.exists = false;
@@ -1786,7 +1846,6 @@ function render() {
     gl.uniform1i(isBoardLoc, 0);
     
     
-//    console.log("HUE");
     requestAnimFrame(render);
 }
 
