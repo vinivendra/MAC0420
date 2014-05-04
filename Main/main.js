@@ -913,9 +913,7 @@ function newPlay (fromX, fromY, toX, toY) {
     toX -= 1;
     toY -= 1;
     
-    var p = ({objectIndex: -1,                          // Índice de objeto da peça que vai se mover
-             instanceIndex: -1,                         // Índice de instância dela
-             piece: 0,                                  // A peça em si
+    var p = ({piece: 0,                                  // A peça que vai se mover
              
              bOrigin: vec2(fromX, fromY),               // Origem no tabuleiro
              bDestination: vec2(toX, toY),              // Destino no tabuleiro
@@ -926,9 +924,19 @@ function newPlay (fromX, fromY, toX, toY) {
              init:initPlay,                             // Inicializa as informações de acordo com
                                                         // a situação instantânea do tabuleiro
              
-             deadObjectIndex: -1,                       // Índice de objeto da peça que vai ser comida
-             deadInstanceIndex: -1,                     // Índice de instância dela
              deadPiece: null,                           // A peça em si
+             
+             isDouble: false,                           // Flag para saber se a jogada é um roque
+             secondPiece: null,                         // A torre em si
+
+                                                        // O equivalente, referente à torre do roque
+                                                        // (se houver)
+             bSOrigin: null,                            // Origem no tabuleiro
+             bSDestination: null,                       // Destino no tabuleiro
+             wSOrigin: null,                            // Origem no mundo
+             wSDestination: null,                       // Destino no mundo
+             sDirection: null,                          // Vetor unitário de direção (no mundo)
+             
              });
     
     
@@ -939,30 +947,40 @@ function newPlay (fromX, fromY, toX, toY) {
 // Inicializa os valores da jogada que precisam ser pegos na hora
 function initPlay() {
     // Pega a peça principal
-    var pieceIndexes = getPiece(this.bOrigin[0], this.bOrigin[1]);
+    this.piece = getPiece(this.bOrigin[0], this.bOrigin[1]);
     
     // Se não tivermos uma peça
-    if (pieceIndexes[0] == -1)
+    if (this.piece == null)
         console.log("ERRO! Não existe peça na posição ", this.bOrigin);
     
-    // Se tivermos
-    this.objectIndex = pieceIndexes[0];
-    this.instanceIndex = pieceIndexes[1];
     
-    this.piece = objects[this.objectIndex].instances[this.instanceIndex];
     
+    // Se a peça for um rei
+    if (piece.type == "king") {
+        // Se a jogada for um roque (se o rei se mover mais de uma casa)
+        if ((bDestination[0] - bOrigin[0] > 1) || (bDestination[0] - bOrigin[0] < -1)) {
+            var secondPieceIndexes;
+            
+            if (bDestination[0] - bOrigin[0] > 1) {
+                this.secondPiece = getPiece(0, 7);
+                this.bSOrigin = vec2(0, 7);
+                this.wSOrigin = boardToWorld(vec2(0, 7));
+            }
+            else {
+                this.secondPiece = getPiece(0, 0);
+                
+                // PROJETAR O MOVIMENTO DA TORRE!
+            }
+            
+        }
+        
+        console.log("Roque!");
+    }
     
     
     // Pega a peça morta
-    var deadPieceIndexes = getPiece(this.bDestination[0], this.bDestination[1]);
+    this.deadPiece = getPiece(this.bDestination[0], this.bDestination[1]);
     
-    this.deadObjectIndex = deadPieceIndexes[0];
-    this.deadInstanceIndex = deadPieceIndexes[1];
-    
-    if (this.deadObjectIndex == -1)
-        this.deadPiece = null;
-    else
-        this.deadPiece = objects[this.deadObjectIndex].instances[this.deadInstanceIndex];
     
     
     // Seta os valores que precisar
@@ -1047,7 +1065,7 @@ function runPlays () {
                     piece.location = play.bDestination;
                     
                     // Remove a peça morta do tabuleiro, caso haja alguma
-                    if (play.deadObjectIndex != -1) {
+                    if (play.deadPiece != null) {
                         play.deadPiece.exists = false;
                         play.deadPiece.location = vec2(-1, -1);
                     }
@@ -1082,12 +1100,12 @@ function getPiece(x, y) {
             var piece = objects[i].instances[j];
             // Se a peça está na posição (x,y) do tabuleiro
             if (piece.location[0] == x && piece.location[1] == y) {
-                return vec2(i, j);
+                return piece;
             }
         }
     }
     
-    return vec2(-1, -1);
+    return null;
 }
 
 
