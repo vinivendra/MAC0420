@@ -771,13 +771,13 @@ function initObjects() {
     k++;
     
     var kings = {string: objStrings[k], vertexStart: 0, vertexEnd: 0, instances: []};
-    kings.instances.push(piece(0, 3, 0, "king"));
+    kings.instances.push(piece(0, 4, 0, "king"));
     kings.instances.push(piece(1, 4, 7, "king"));
     objects.push(kings);
     k++;
     
     var queens = {string: objStrings[k], vertexStart: 0, vertexEnd: 0, instances: []};
-    queens.instances.push(piece(0, 4, 0, "queen"));
+    queens.instances.push(piece(0, 3, 0, "queen"));
     queens.instances.push(piece(1, 3, 7, "queen"));
     objects.push(queens);
     k++;
