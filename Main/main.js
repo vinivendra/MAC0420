@@ -25,7 +25,7 @@ var verticesStart = 0;      // Inteiro para saber onde cada peça começa
 var points = [];            // Vértices ordenados por face
 var previousPointsSize = 0; // Tamanho acumulativo do vetor de vértices,
                             // para saber onde cada peça começa e acaba nele
-var tabColors = [];         // Vetor de cores do tabuleiro
+var colors = [];            // Vetor de cores dos vértices
 var tabSize = 0;            // Número de vértices do tabuleiro
 var tabMatrix = mat4();     // Matriz do tabuleiro
 
@@ -173,16 +173,16 @@ function finishInit() {
     
     
     // Seta a matriz do tabuleiro
-    var s = 0.2;
+    var s = 0.18;
     tabMatrix  = [vec4(    s,   0.0,   0.0,   0.0),
                   vec4(  0.0,     s,   0.0,   0.0),
                   vec4(  0.0,   0.0,     s,   0.0),
                   vec4(  0.0,   0.0,   0.0,   1.0) ];
     
-    var t = -0.15;
-    var trans  = [vec4(  1.0,   0.0,   0.0,   0.0),
+    var t = -0.09;
+    var trans  = [vec4(  1.0,   0.0,   0.0,   0.045),
                   vec4(  0.0,   1.0,   0.0,     t),
-                  vec4(  0.0,   0.0,   1.0,   0.0),
+                  vec4(  0.0,   0.0,   1.0,   0.136),
                   vec4(  0.0,   0.0,   0.0,   1.0) ];
     
     tabMatrix = times(trans, tabMatrix);
@@ -227,6 +227,14 @@ function finishInit() {
     
     
     
+    var cBuffer = gl.createBuffer();
+    gl.bindBuffer( gl.ARRAY_BUFFER, cBuffer );
+    gl.bufferData( gl.ARRAY_BUFFER, flatten(colors), gl.DYNAMIC_DRAW );
+    
+    var vColor = gl.getAttribLocation( program, "vColor" );
+    gl.vertexAttribPointer( vColor, 4, gl.FLOAT, false, 0, 0 );
+    gl.enableVertexAttribArray( vColor );
+    
     
     
     // Pega as variáveis uniformes dos shaders
@@ -258,18 +266,11 @@ function finishInit() {
     
     
     
-    // Seta o zoom inicial
-    var r = 0.75;
-    eyeAbs = vec3(eyeAbs[0] * r, eyeAbs[1] * r, eyeAbs[2] * r);
-    orthoZoom *= r;
-    if (projectionType == "Ortho") { updateOrthogonal(); }
-    hasToUpdateLookAt = true;
-    
     
     // Inicializa o vetor de jogadas (nao deve ficar aqui)
-    newPlay(0, 7, 7, 0);
-    newPlay(0, 0, 4, 4);
-    runPlays();
+//    newPlay(0, 7, 7, 0);
+//    newPlay(0, 0, 4, 4);
+//    runPlays();
     
     
     // Começa o loop de execução
@@ -550,6 +551,16 @@ function readFaces(piece) {
         // Adiciona os vértices, em ordem, ao vetor de "pontos"
         for (var k = 0; k < 3; k++)
             points.push(vertices[verticesStart + number[k]]);
+        
+        // Adiciona as cores ao vetor de cores
+        for (var k = 0; k < 3; k++) {
+            var c = vertices[verticesStart + number[k]][1];
+            var col = vec4(c, c, c, 1.0);
+            colors.push(col);
+        }
+        
+
+
     }
     
     // Configura a peça para saber onde é
@@ -617,9 +628,9 @@ function readTabFaces(string) {
             
             // Adiciona as cores ao vetor de cores
             var col = vec4(c, c, c, 1.0);
-            tabColors.push(col);
-            tabColors.push(col);
-            tabColors.push(col);
+            colors.push(col);
+            colors.push(col);
+            colors.push(col);
         }
         // Se vamos mudar de material
         else if (string.charAt(i) == 'u') {

@@ -13,6 +13,7 @@
             
             <script id="vertex-shader" type="x-shader/x-vertex">
                 attribute vec4 vPosition;
+                attribute vec4 vColor;
                 varying vec4 color;
                 uniform mat4 matrix;
                 uniform bool team;
@@ -25,21 +26,21 @@
                     //    0.6 + 0.5 * vPosition.y;
                     //Pretas:
                     //    0.6 * vPosition.y;
-                    float c;
-                    if (team)
-                    c = 0.6 * vPosition.y;
-                    
-                    else
-                    c = 0.6 + 0.5 * vPosition.y;
-                    
-                    color = vec4(c, c, c, 1.0);
-                    
-                    
                     
                     if (isBoard)
-                    color = vec4(0.5, 0.3, 0.3, 1.0);
+                        color = vColor;
                     
-
+                    else {
+                        if (team)
+                        color = 0.6 * vColor;
+                        
+                        else
+                        color = 0.6 + 0.5 * vColor;
+                        
+                        color.w = 1.0;
+                    }
+                    
+                    
                     
                     gl_Position = matrix * vPosition;
                 }
