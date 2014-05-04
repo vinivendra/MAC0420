@@ -17,6 +17,7 @@ var time;
 
 // ===================================================================================================
 /* Vértices para todas as peças */
+var objNames = [];          // Vetor com os nomes dos arquivos *.obj
 var objStrings = [];        // Vetor de .obj's
 
 var vertices = [];          // Vértices das peças
@@ -24,8 +25,11 @@ var verticesStart = 0;      // Inteiro para saber onde cada peça começa
 var points = [];            // Vértices ordenados por face
 var previousPointsSize = 0; // Tamanho acumulativo do vetor de vértices,
                             // para saber onde cada peça começa e acaba nele
+var tabColors = [];         // Vetor de cores do tabuleiro
+var tabSize = 0;            // Número de vértices do tabuleiro
+var tabMatrix = mat4();     // Matriz do tabuleiro
 
-// Contador para os vetores acima
+// Contadores para os vetores acima
 var i = 0;
 
 
@@ -100,8 +104,7 @@ var playbackIsPlaying = true;
 // Vertex Shader:
 var matrixLoc;              // Variável que contém a matriz final (projeção & model-view)
 var teamLoc;                // Flag para saber em qual time a peça atual está
-var alphaLoc                // Quantidade de alpha a se usar na peça
-
+var isBoardLoc;             // Flag para saber se estamos desenhando o tabuleiro ou não
 
 
 
@@ -115,10 +118,11 @@ var alphaLoc                // Quantidade de alpha a se usar na peça
 /* Main */
 window.onload = function init()
 {
+    
     /* Inicialização do WebGL */
     canvas = document.getElementById( "gl-canvas" );
     
-    gl = WebGLUtils.setupWebGL( canvas, {premultupliedAlpha:false} );
+    gl = WebGLUtils.setupWebGL( canvas );
     if ( !gl ) { alert( "WebGL isn't available" ); }
     
     
@@ -133,27 +137,56 @@ window.onload = function init()
     
     // Lê os *.obj
 
-    readObj('Pecas/torre.obj');
-    readObj('Pecas/cavalo.obj');
-    readObj('Pecas/bispo.obj');
-    readObj('Pecas/rei.obj');
-    readObj('Pecas/rainha.obj');
-    readObj('Pecas/peao.obj');
-    
+//    readObj('Pecas/torre.obj');
+//    readObj('Pecas/cavalo.obj');
+//    readObj('Pecas/bispo.obj');
+//    readObj('Pecas/rei.obj');
+//    readObj('Pecas/rainha.obj');
+//    readObj('Pecas/peao.obj');
+
+    objNames = ['Pecas/torre.obj',
+                'Pecas/cavalo.obj',
+                'Pecas/bispo.obj',
+                'Pecas/rei.obj',
+                'Pecas/rainha.obj',
+                'Pecas/peao.obj',];
+    readObj('Tabuleiro.obj');
 }
 
 
 
 function finishInit() {
+    i = 0;
+    delete(objNames);
     
     // Inicializa as informações das peças
     initObjects();
     
+    // Lê os vértices e as faces do tabuleiro
+    readTabVertices(objStrings[0]);
+    readTabFaces(objStrings[0]);
     // Lê os vértices e marca inícios e fins das peças
     for (var i = 0; i < objects.length; i++) {
         readVertices(objects[i]);
         readFaces(objects[i]);
     }
+    
+    
+    // Seta a matriz do tabuleiro
+    var s = 0.2;
+    tabMatrix  = [vec4(    s,   0.0,   0.0,   0.0),
+                  vec4(  0.0,     s,   0.0,   0.0),
+                  vec4(  0.0,   0.0,     s,   0.0),
+                  vec4(  0.0,   0.0,   0.0,   1.0) ];
+    
+    var t = -0.15;
+    var trans  = [vec4(  1.0,   0.0,   0.0,   0.0),
+                  vec4(  0.0,   1.0,   0.0,     t),
+                  vec4(  0.0,   0.0,   1.0,   0.0),
+                  vec4(  0.0,   0.0,   0.0,   1.0) ];
+    
+    tabMatrix = times(trans, tabMatrix);
+    
     
     // Liga os callbacks do mouse
     canvas.onmousedown = handleMouseDown;
@@ -182,15 +215,11 @@ function finishInit() {
     gl.useProgram( program );
     
     
-    
-    var flat = flatten(points);
-//    console.log("Flat: ", flat.length, points.length);
-    
     // Create a buffer object, initialize it, and associate it with the
     // associated attribute variable in our vertex shader
     var vBuffer = gl.createBuffer();
     gl.bindBuffer( gl.ARRAY_BUFFER, vBuffer );
-    gl.bufferData( gl.ARRAY_BUFFER, flat, gl.DYNAMIC_DRAW );
+    gl.bufferData( gl.ARRAY_BUFFER, flatten(points), gl.DYNAMIC_DRAW );
     
     var vPosition = gl.getAttribLocation( program, "vPosition" );
     gl.vertexAttribPointer( vPosition, 4, gl.FLOAT, false, 0, 0 );
@@ -203,8 +232,7 @@ function finishInit() {
     // Pega as variáveis uniformes dos shaders
     matrixLoc = gl.getUniformLocation(program, "matrix");
     teamLoc = gl.getUniformLocation(program, "team");
-    alphaLoc = gl.getUniformLocation(program, "alpha");
-
+    isBoardLoc = gl.getUniformLocation(program, "isBoard");
     
     
     
@@ -224,9 +252,18 @@ function finishInit() {
     
     
     
+    
     // Inicializa a matriz de projeção
     updatePerspective();
     
+    
+    
+    // Seta o zoom inicial
+    var r = 0.75;
+    eyeAbs = vec3(eyeAbs[0] * r, eyeAbs[1] * r, eyeAbs[2] * r);
+    orthoZoom *= r;
+    if (projectionType == "Ortho") { updateOrthogonal(); }
+    hasToUpdateLookAt = true;
     
     
     // Inicializa o vetor de jogadas (nao deve ficar aqui)
@@ -270,8 +307,15 @@ var readObj = function(url) {
 // Callback para quando a leitura tiver sido feita,
 // já que ela é assíncrona
 var readObjCallback = function(obj) {
+    // Coloca o novo objeto no vetor
     objStrings.push(obj);
-    if (objStrings.length == 6)
+    // Se ainda não acabou, lê o próximo
+    if (objStrings.length < 7) {
+        readObj(objNames[i]);
+        i++;
+    }
+    // Se já acabou, pode fazer o resto
+    else
         finishInit();
 };
 
@@ -375,6 +419,7 @@ function readVertices(piece) {
      mtllib bispo.mtl
      o Line02
      */
+    
     i = 0;
     for (var bla = 0; bla < 4; bla++) {
         while (piece.string.charAt(i) != '\n') i++;
@@ -410,6 +455,52 @@ function readVertices(piece) {
     }
     
 }
+
+// Análoga à função acima, para o tabuleiro
+function readTabVertices(string) {
+    /* Pula as quatro primeiras linhas:
+     
+     # Blender v2.70 (sub 0) OBJ File: ''
+     # www.blender.org
+     mtllib bispo.mtl
+     o Line02
+     */
+    i = 0;
+    for (var bla = 0; bla < 4; bla++) {
+        while (string.charAt(i) != '\n') i++;
+        i++;
+    }
+    
+    // Para cada linha começada com "v "
+    while (string.charAt(i) == 'v' && string.charAt(i+1) != 'n') {
+        i += 2;                     // Pula o "v "
+        var j;                      // j vai para o fim de cada número
+        var vertex = vec4();        // O novo vértice a ser adicionado
+        
+        // Leitura da coordenada x
+        for (j = i; string.charAt(j) != ' '; j++);            // Acha o fim do número
+        vertex[0] = parseFloat(string.substr(i, j-1)) / 2;    // Adiciona a coordenada ao novo vértice
+        
+        // Leitura da coordenada y
+        i = j + 1;                                                  // Pula para o número seguinte
+        for (j = i; string.charAt(j) != ' '; j++);
+        vertex[1] = parseFloat(string.substr(i, j-1)) / 2;
+        
+        // Leitura da coordenada z
+        i = j + 1;
+        for (j = i; string.charAt(j) != '\n'; j++);
+        vertex[2] = parseFloat(string.substr(i, j-1)) / 2;
+        
+        i = j + 1;      // Vai para a próxima linha
+        
+        vertex[3] = 1.0;            // Coordenada homogênea
+        
+        // Coloca o novo vértice na lista
+        vertices.push( vertex );
+    }
+    
+}
+
 
 // Lê as faces, ou seja, os grupos de vértices correspondentes
 // a faces e coloca esses grupos em um novo vetor
@@ -470,10 +561,88 @@ function readFaces(piece) {
     verticesStart = vertices.length;
 }
 
+
+
+// Equivalente ao método acima, mas especificamente para o tabuleiro
+function readTabFaces(string) {
+    // Pula todas as linhas "vn ", que não vai ser usadas por enquanto
+    while (string.charAt(i) == 'v') {
+        while (string.charAt(i) != '\n') i++;
+        i++;
+    }
+    
+    /* Pula mais duas linhas:
+     
+     usemtl Material.003
+     s off
+     */
+    while (string.charAt(i) != '\n') i++;
+    i++;
+    while (string.charAt(i) != '\n') i++;
+    i++;
+    
+    var c = 0.3;
+    
+    // Para cada face
+    while (string.charAt(i) == 'f' || string.charAt(i) == 'u') {
+        // Se estamos lendo uma face nova
+        if (string.charAt(i) == 'f') {
+            i += 2;                 // Pula o "f "
+            var j;                  // Vai para o fim de cada número
+            
+            var number = [];        // Triângulo a ser adicionado (índice dos 3 vértices na lista)
+            
+            // Primeiro vértice
+            for (j = i; string.charAt(j) != '/'; j++);          // Lê até a primeira '/'
+            number[0] = parseInt(string.substr(i, j-1)) - 1;    // Adiciona o número
+            for (i = j; string.charAt(i) != ' '; i++);          // Pula o resto, que por
+                                                                // enquanto não vamos usar
+            i++;
+            
+            // Segundo vértice
+            for (j = i; string.charAt(j) != '/'; j++);
+            number[1] = parseInt(string.substr(i, j-1)) - 1;
+            for (i = j; string.charAt(i) != ' '; i++);
+            i++;
+            
+            // Terceiro vértice
+            for (j = i; string.charAt(j) != '/'; j++);
+            number[2] = parseInt(string.substr(i, j-1)) - 1;
+            for (i = j; string.charAt(i) != '\n'; i++);
+            i++;
+            
+            // Adiciona os vértices, em ordem, ao vetor de "pontos"
+            for (var k = 0; k < 3; k++)
+                points.push(vertices[verticesStart + number[k]]);
+            
+            // Adiciona as cores ao vetor de cores
+            var col = vec4(c, c, c, 1.0);
+            tabColors.push(col);
+            tabColors.push(col);
+            tabColors.push(col);
+        }
+        // Se vamos mudar de material
+        else if (string.charAt(i) == 'u') {
+            c += 0.1;
+            
+            // Vai até a próxima linha
+            while (string.charAt(i) != '\n') i++;
+            i++;
+        }
+    }
+    
+    // Configura a peça para saber onde é
+    // o começo e o final dos seus vértices na lista
+    previousPointsSize = points.length;
+    tabSize = points.length;
+    
+    verticesStart = vertices.length;
+}
+
+
 // Inicializa as peças, com todas as informações necessárias
-// TEMPORARIAMENTE ASSIM:
 function initObjects() {
-    var k = 0;
+    var k = 1;
     
     var rooks = {string: objStrings[k], vertexStart: 0, vertexEnd: 0, instances: []};
     rooks.instances.push(piece(0, 0, 0));
@@ -523,17 +692,6 @@ function initObjects() {
         pawns.instances.push(piece(1, i, 6));
     }
     objects.push(pawns);
-    
-    
-//    var bishop = {string: bishopVertices, vertexStart: 0, vertexEnd: 0, instances: []};
-//    
-//    for (var i = 0; i < 8; i++) {
-//        for (var j = 0; j < 8; j++) {
-//            bishop.instances.push(piece(i%2, i, j));
-//        }
-//    }
-//    
-//    objects.push(bishop);
 }
 
 
@@ -551,7 +709,6 @@ function piece (team, x, y) {
     var piece = ({
                  exists: true,                     // Se a peça ainda existe
                  color: team,                       // O time da peça
-                 alpha: 1.0,                        // O alpha da cor
                  position: vec3(),                  // Posição no mundo
                  scale: vec3( direction, 1.0, 1.0 ),// Escala da peça
                  translation: mat4(),               // Matriz pessoal de translação
@@ -600,7 +757,6 @@ function resetObjects() {
 
             // Reseta tudo o que precisar das peças
             p.exists = true;                    // A peça volta a existir
-            p.alpha = 1.0;                      // E volta a aparecer, opaca
             p.position = vec3();                // Reseta: posição no mundo;
             p.scale = vec3( direction, 1.0, 1.0 );  // escala da peça;
             p.translation = mat4();             // matriz pessoal de translação;
@@ -1482,15 +1638,26 @@ function render() {
                 gl.uniformMatrix4fv(matrixLoc, false, flatten(times(projec, times(lookat, objects[i].instances[j].getMatrix()))));
                 
                 // Manda também a cor da peça, para podermos passar a cor certa para o fragment shader
-                gl.uniform1i(teamLoc, objects[i].instances[j].color);
-                // E o alpha a ser usado
-                gl.uniform1f(alphaLoc, objects[i].instances[j].alpha);
+                gl.uniform1f(teamLoc, objects[i].instances[j].color);
                 
                 // Desenha a peça atual
                 gl.drawArrays( gl.TRIANGLES, objects[i].vertexStart, objects[i].vertexEnd - objects[i].vertexStart);
             }
         }
     }
+    
+    
+    // Renderiza o tabuleiro também
+    // Manda para o shader a matriz a ser aplicada (projeção x view x model)
+    gl.uniformMatrix4fv(matrixLoc, false, flatten(times(times(projec, lookat), tabMatrix)));
+    
+    // Manda também a cor da peça, para podermos passar a cor certa para o fragment shader
+    gl.uniform1i(isBoardLoc, 1);
+    
+    // Desenha a peça atual
+    gl.drawArrays( gl.TRIANGLES, 0, tabSize);
+
+    gl.uniform1i(isBoardLoc, 0);
     
     
 //    console.log("HUE");
@@ -1511,6 +1678,3 @@ function render() {
 
 
 
-
-// COMO MUDAR O TAMANHO DA CAIXA
-// - Acertar o zoom inicial, se o acima for possível

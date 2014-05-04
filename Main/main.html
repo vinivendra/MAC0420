@@ -8,14 +8,15 @@
         <meta http-equiv="Content-Type" content="text/html;charset=utf-8" >
             <title>Xadrez</title>
             
-            <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
+            <!-- <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script> -->
+            <script src="jquery-2.1.1.min.js"></script>
             
             <script id="vertex-shader" type="x-shader/x-vertex">
                 attribute vec4 vPosition;
                 varying vec4 color;
                 uniform mat4 matrix;
                 uniform bool team;
-                uniform float alpha;
+                uniform bool isBoard;
                 
                 void
                 main()
@@ -31,7 +32,14 @@
                     else
                     c = 0.6 + 0.5 * vPosition.y;
                     
-                    color = vec4(c, c, c, alpha);
+                    color = vec4(c, c, c, 1.0);
+                    
+                    
+                    
+                    if (isBoard)
+                    color = vec4(0.5, 0.3, 0.3, 1.0);
+                    
+
                     
                     gl_Position = matrix * vPosition;
                 }
