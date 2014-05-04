@@ -173,17 +173,15 @@ function finishInit() {
     
     
     // Seta a matriz do tabuleiro
-    var s = 0.18;
-    tabMatrix  = [vec4(    s,   0.0,   0.0,   0.0),
-                  vec4(  0.0,     s,   0.0,   0.0),
-                  vec4(  0.0,   0.0,     s,   0.0),
-                  vec4(  0.0,   0.0,   0.0,   1.0) ];
+    tabMatrix  = [vec4( 0.18,   0.0,   0.0,   0.0),
+                  vec4(  0.0, 0.126,   0.0,   0.0),
+                  vec4(  0.0,   0.0,  0.18,   0.0),
+                  vec4(  0.0,   0.0,   0.0,   1.0)];
     
-    var t = -0.09;
     var trans  = [vec4(  1.0,   0.0,   0.0,   0.045),
-                  vec4(  0.0,   1.0,   0.0,     t),
+                  vec4(  0.0,   1.0,   0.0,   -0.06),
                   vec4(  0.0,   0.0,   1.0,   0.136),
-                  vec4(  0.0,   0.0,   0.0,   1.0) ];
+                  vec4(  0.0,   0.0,   0.0,     1.0)];
     
     tabMatrix = times(trans, tabMatrix);
     
@@ -199,7 +197,7 @@ function finishInit() {
     
     /* Configuração do WebGL */
     gl.viewport( 0, 0, canvas.width, canvas.height );
-    gl.clearColor( 1.0, 1.0, 1.0, 1.0 );
+    gl.clearColor( 0.8, 0.8, 0.8, 1.0 );
     
     
     
@@ -266,11 +264,95 @@ function finishInit() {
     
     
     
+
     
     // Inicializa o vetor de jogadas (nao deve ficar aqui)
-//    newPlay(0, 7, 7, 0);
-//    newPlay(0, 0, 4, 4);
-//    runPlays();
+    newPlay(5,2,5,4);
+    newPlay(5,7,5,5);
+    newPlay(7,1,6,3);
+    newPlay(2,8,3,6);
+    newPlay(6,1,2,5);
+    newPlay(1,7,1,6);
+    newPlay(2,5,1,4);
+    newPlay(7,8,6,6);
+    newPlay(5,1,7,1);
+    newPlay(6,8,5,7);
+    newPlay(6,1,5,1);
+    newPlay(2,7,2,5);
+    newPlay(1,4,2,3);
+    newPlay(4,7,4,6);
+    newPlay(3,2,3,3);
+    newPlay(5,8,7,8);
+    newPlay(8,2,8,3);
+    newPlay(3,6,2,8);
+    newPlay(4,2,4,4);
+    newPlay(2,8,4,7);
+    newPlay(3,3,3,4);
+    newPlay(3,7,3,6);
+    newPlay(3,4,2,5);
+    newPlay(1,6,2,5);
+    newPlay(2,1,3,3);
+    newPlay(3,8,2,7);
+    newPlay(3,1,7,5);
+    newPlay(2,5,2,4);
+    newPlay(3,3,2,1);
+    newPlay(8,7,8,6);
+    newPlay(7,5,8,4);
+    newPlay(3,6,3,5);
+    newPlay(4,4,5,5);
+    newPlay(6,6,5,4);
+    newPlay(8,4,5,7);
+    newPlay(4,8,5,7);
+    newPlay(5,5,4,6);
+    newPlay(5,7,6,6);
+    newPlay(2,1,4,2);
+    newPlay(5,4,4,6);
+    newPlay(4,2,3,4);
+    newPlay(4,6,3,4);
+    newPlay(2,3,3,4);
+    newPlay(4,7,2,6);
+    newPlay(6,3,5,5);
+    newPlay(1,8,5,8);
+    newPlay(3,4,6,7);
+    newPlay(6,8,6,7);
+    newPlay(5,5,6,7);
+    newPlay(5,8,5,1);
+    newPlay(4,1,5,1);
+    newPlay(7,8,6,7);
+    newPlay(5,1,5,3);
+    newPlay(6,6,7,5);
+    newPlay(5,3,7,5);
+    newPlay(8,6,7,5);
+    newPlay(2,2,2,3);
+    newPlay(6,7,5,6);
+    newPlay(1,2,1,3);
+    newPlay(5,6,4,6);
+    newPlay(1,3,2,4);
+    newPlay(3,5,2,4);
+    newPlay(1,1,1,5);
+    newPlay(2,6,4,5);
+    newPlay(6,2,6,3);
+    newPlay(2,7,3,8);
+    newPlay(7,1,6,2);
+    newPlay(3,8,6,5);
+    newPlay(1,5,1,7);
+    newPlay(7,7,7,6);
+    newPlay(1,7,1,6);
+    newPlay(4,6,3,5);
+    newPlay(6,2,5,1);
+    newPlay(4,5,6,4);
+    newPlay(7,2,7,3);
+    newPlay(6,4,8,3);
+    newPlay(5,1,4,2);
+    newPlay(3,5,2,5);
+    newPlay(1,6,4,6);
+    newPlay(2,5,3,5);
+    newPlay(4,6,1,6);
+    newPlay(8,3,6,2);
+    newPlay(7,3,7,4);
+    newPlay(6,5,4,3);
+    newPlay(1,6,5,6);
+    runPlays();
     
     
     // Começa o loop de execução
@@ -660,58 +742,58 @@ function initObjects() {
     var k = 1;
     
     var rooks = {string: objStrings[k], vertexStart: 0, vertexEnd: 0, instances: []};
-    rooks.instances.push(piece(0, 0, 0));
-    rooks.instances.push(piece(0, 7, 0));
-    rooks.instances.push(piece(1, 0, 7));
-    rooks.instances.push(piece(1, 7, 7));
+    rooks.instances.push(piece(0, 0, 0, "rook"));
+    rooks.instances.push(piece(0, 7, 0, "rook"));
+    rooks.instances.push(piece(1, 0, 7, "rook"));
+    rooks.instances.push(piece(1, 7, 7, "rook"));
     objects.push(rooks);
     k++;
 
     // Os cavalos precisam ser girados em 90 graus
     var knights = {string: objStrings[k], vertexStart: 0, vertexEnd: 0, instances: []};
-    knights.instances.push(piece(0, 1, 0));
+    knights.instances.push(piece(0, 1, 0, "knight"));
     knights.instances[knights.instances.length - 1].rotateY(90);
-    knights.instances.push(piece(0, 6, 0));
+    knights.instances.push(piece(0, 6, 0, "knight"));
     knights.instances[knights.instances.length - 1].rotateY(90);
-    knights.instances.push(piece(1, 1, 7));
+    knights.instances.push(piece(1, 1, 7, "knight"));
     knights.instances[knights.instances.length - 1].rotateY(90);
-    knights.instances.push(piece(1, 6, 7));
+    knights.instances.push(piece(1, 6, 7, "knight"));
     knights.instances[knights.instances.length - 1].rotateY(90);
     objects.push(knights);
     k++;
     
     var bishops = {string: objStrings[k], vertexStart: 0, vertexEnd: 0, instances: []};
-    bishops.instances.push(piece(0, 2, 0));
-    bishops.instances.push(piece(0, 5, 0));
-    bishops.instances.push(piece(1, 2, 7));
-    bishops.instances.push(piece(1, 5, 7));
+    bishops.instances.push(piece(0, 2, 0, "bishop"));
+    bishops.instances.push(piece(0, 5, 0, "bishop"));
+    bishops.instances.push(piece(1, 2, 7, "bishop"));
+    bishops.instances.push(piece(1, 5, 7, "bishop"));
     objects.push(bishops);
     k++;
     
     var kings = {string: objStrings[k], vertexStart: 0, vertexEnd: 0, instances: []};
-    kings.instances.push(piece(0, 3, 0));
-    kings.instances.push(piece(1, 4, 7));
+    kings.instances.push(piece(0, 3, 0, "king"));
+    kings.instances.push(piece(1, 4, 7, "king"));
     objects.push(kings);
     k++;
     
     var queens = {string: objStrings[k], vertexStart: 0, vertexEnd: 0, instances: []};
-    queens.instances.push(piece(0, 4, 0));
-    queens.instances.push(piece(1, 3, 7));
+    queens.instances.push(piece(0, 4, 0, "queen"));
+    queens.instances.push(piece(1, 3, 7, "queen"));
     objects.push(queens);
     k++;
     
 
     var pawns = {string: objStrings[k], vertexStart: 0, vertexEnd: 0, instances: []};
     for (var i = 0; i < 8; i++) {
-        pawns.instances.push(piece(0, i, 1));
-        pawns.instances.push(piece(1, i, 6));
+        pawns.instances.push(piece(0, i, 1, "pawn"));
+        pawns.instances.push(piece(1, i, 6, "pawn"));
     }
     objects.push(pawns);
 }
 
 
 // Cria uma nova peça no time TEAM e na posição (X, Y) (medida em casas) do tabuleiro
-function piece (team, x, y) {
+function piece (team, x, y, type) {
     // Acha a direção para a qual a peça está olhando
     var direction;
     if (team) direction = -1.0;
@@ -825,6 +907,10 @@ function resetObjects() {
 /*  Jogadas */
 // Cria uma nova jogada e insere ela na fila
 function newPlay (fromX, fromY, toX, toY) {
+    fromX -= 1;
+    fromY -= 1;
+    toX -= 1;
+    toY -= 1;
     
     var p = ({objectIndex: -1,                          // Índice de objeto da peça que vai se mover
              instanceIndex: -1,                         // Índice de instância dela
@@ -1457,7 +1543,7 @@ function updateEye() {
 /* MATRIZES DE PROJEÇÃO */
 // Cria e seta a matriz de perspectiva
 function updatePerspective() {
-    projec = perspective(70, canvas.width/canvas.height, 2.0, 0.0001);
+    projec = perspective(60, canvas.width/canvas.height, 2.0, 0.0001);
 }
 
 // Idem, para a ortogonal
