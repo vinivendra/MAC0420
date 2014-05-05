@@ -6,6 +6,9 @@ var gl;
 // Tamanho da tela
 var screenWidth;
 var screenHeight;
+// Tamanho antigo da tela, usado para redimensionamentos
+var oldWidth;
+var oldHeight;
 
 // Tempo entre cada frame
 var time;
@@ -90,6 +93,7 @@ var projec = mat4();                // Matriz de projeção
 /* Callbacks */
 // Mouse
 var mouseDown = false;      // Flag que indica se o botão esquerdo está apertado
+var mouseRDown = false;     // Flag que indica se o botão direito está apertado
 var lastMouseX = null;      // Última posição conhecida do mouse
 var lastMouseY = null;      //
 
@@ -140,6 +144,8 @@ window.onload = function init()
     // Seta os valores do tamanho da tela
     screenWidth = canvas.width;
     screenHeight = canvas.height;
+    oldWidth = screenWidth;
+    oldHeight = screenHeight;
     
     
     // Lê os *.obj
@@ -971,6 +977,7 @@ function promote(piece, i) {
 // Lê um arquivo PGN e cria uma nova jogada
 function newPGN(string) {
     var i = 0;
+    plays = [];    
     
     // Pula linhas em branco
     while (string.charAt(i) == '\n')
@@ -1059,7 +1066,6 @@ function newPGN(string) {
         }
     }
     
-
     resetPlays();
     
 }
@@ -1808,8 +1814,10 @@ function updateEye() {
     var minNovo = Math.min(canvas.clientHeight, canvas.clientWidth);
     minNovo = Math.max(minNovo, 1);                 // Para não dividir por 0
     
-    // Pega a razão de zoom
-    var ratio = 512/minNovo;
+    var minVelho = Math.min(oldHeight, oldWidth);
+    minVelho = Math.max(minVelho, 1);                 // Para não dividir por 0
+    
+    var ratio = minVelho / minNovo;
     
     // Aplica ao zoom absoluto
     eye = vec3(eyeAbs[0] * ratio, eyeAbs[1] * ratio, eyeAbs[2] * ratio);
@@ -1819,7 +1827,9 @@ function updateEye() {
 }
 
 
-
+sv - sn
+zn - zv
+zn = zv * sv / sn
 
 
 
@@ -1860,8 +1870,10 @@ function updateOrthogonal() {
     var minNovo = Math.min(canvas.clientHeight, canvas.clientWidth);
     minNovo = Math.max(minNovo, 1);                 // Para não dividir por 0
     
-    // Pega a razão de zoom
-    var ratio = 512/minNovo;
+    var minVelho = Math.min(oldHeight, oldWidth);
+    minVelho = Math.max(minVelho, 1);                 // Para não dividir por 0
+    
+    var ratio = minVelho / minNovo;
     
     projec = ortho(orthoZoom * ratio * -canvas.width/canvas.height, orthoZoom * ratio * canvas.width/canvas.height, orthoZoom * ratio * -1, orthoZoom * ratio * 1, orthoZoom * ratio * -4.1, orthoZoom * ratio * -0.1);
 }
@@ -1935,7 +1947,10 @@ function resizeCanvas() {
 function handleMouseDown(event) {
     // Seta a flag dizendo para outras funções que o botão
     // está apertado
-    mouseDown = true;
+    if (event.button == 0)
+        mouseDown = true;
+    else if (event.button == 2)
+        mouseRDown = true;
     // E seta a localização anterior do mouse,
     // para efeitos de comparação com a atual
     lastMouseX = event.clientX;
@@ -1945,13 +1960,15 @@ function handleMouseDown(event) {
 // Lida com o botão do mouse sendo solto
 function handleMouseUp(event) {
     // Reseta a flag
-    mouseDown = false;
+    if (event.button == 0)
+        mouseDown = false;
+    else if (event.button == 2)
+        mouseRDown = false;
 }
+
 
 // Lida com o mouse se movendo
 function handleMouseMove(event) {
-    // Só vamos rodar se o botão estiver apertado
-    if (!mouseDown) return;
     
     // Pega as novas coordenadas
     var newX = event.clientX;
@@ -1962,7 +1979,7 @@ function handleMouseMove(event) {
     var deltaY = newY - lastMouseY;
     
     // Se estamos dando zoom
-    if (event.shiftKey) {
+    if (mouseRDown) {
         var dy = 1 - deltaY/screenHeight;
         eyeAbs = vec3(eyeAbs[0] * dy, eyeAbs[1] * dy, eyeAbs[2] * dy);
         orthoZoom *= dy;
@@ -1970,7 +1987,7 @@ function handleMouseMove(event) {
         hasToUpdateLookAt = true;
     }
     // Se estamos girando a cena
-    else {
+    else if (mouseDown) {
         // Roda a cena de acordo
         var velocidade = 4;
         rotation = RotTrackball(vec2(velocidade * deltaX, velocidade * deltaY));
