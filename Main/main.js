@@ -13,6 +13,9 @@ var time;
 
 
 
+/* Abridor de arquivos */
+fileInput = document.getElementById('files');
+
 
 
 // ===================================================================================================
@@ -259,7 +262,7 @@ function finishInit() {
     eyeAbs = vec3(radius * Math.cos(theta), radius * Math.sin(theta) * Math.cos(phi), radius * Math.sin(theta) * Math.sin(phi));
     at = vec3(0.0, 0.0, 0.0);
     up = vec3(0.0, 1.0, 0.0);
-    
+
     
     
     
@@ -271,6 +274,20 @@ function finishInit() {
 
     
     // Inicializa o vetor de jogadas (nao deve ficar aqui)
+    if (window.File) {
+        console.log("SUCESSO");
+        
+        fileInput.addEventListener('change', handleFileSelect);
+    }
+    else {
+        newPlay(5,7,5,5,-1);
+        newPlay(7,1,6,3,-1);
+        newPlay(2,8,3,6,-1);
+        newPlay(6,1,2,5,-1);
+        newPlay(1,7,1,6,-1);
+    }
+    
+    
     
     // Exemplo de en passant
 //    newPlay(5,2,5,4);
@@ -280,12 +297,12 @@ function finishInit() {
     
     
     // Partida com 2 roques curtos
-    newPlay(5,2,5,4,1);
-    newPlay(5,7,5,5,-1);
-    newPlay(7,1,6,3,-1);
-    newPlay(2,8,3,6,-1);
-    newPlay(6,1,2,5,-1);
-    newPlay(1,7,1,6,-1);
+//    newPlay(5,2,5,4,1);
+//    newPlay(5,7,5,5,-1);
+//    newPlay(7,1,6,3,-1);
+//    newPlay(2,8,3,6,-1);
+//    newPlay(6,1,2,5,-1);
+//    newPlay(1,7,1,6,-1);
 //    newPlay(2,5,1,4);
 //    newPlay(7,8,6,6);
 //    newPlay(5,1,7,1);
@@ -416,6 +433,17 @@ var readObjCallback = function(obj) {
 };
 
 
+// Callback da escolha do pgn
+function handleFileSelect(evt) {
+    var f = fileInput.files[0];               // Vamos rodar apenas o primeiro arquivo
+    var reader = new FileReader();
+    // Callback da leitura do pgn
+    reader.onload = function(e) {
+                        newPGN(reader.result);
+                     }
+    
+    reader.readAsText(f);
+}
 
 
 
@@ -938,9 +966,128 @@ function promote(piece, i) {
 
 
 
+
 /*  Jogadas */
+// Lê um arquivo PGN e cria uma nova jogada
+function newPGN(string) {
+    var i = 0;
+    
+    // Pula linhas em branco
+    while (string.charAt(i) == '\n')
+        i++;
+    
+    // Pula todas as linhas que começarem com '['
+    while (string.charAt(i) == '[') {
+        while (string.charAt(i) != '\n')
+            i++;
+        i++;
+    }
+
+    // Pula linhas em branco
+    while (string.charAt(i) == '\n')
+        i++;
+    
+    while (string.length > i + 1) {
+        // Se for um comentário
+        if (string.charAt(i+1) == '{') {
+            while (string.charAt(i) != '}')
+                i++;
+        }
+        // Se não
+        else {
+            // Pula o número e o ponto
+            while (string.length > i + 1) {
+                if (((string.charAt(i) == ' ') || (string.charAt(i) == '\n'))) {
+                    if ((string.charAt(i+2) != '.') && (string.charAt(i+3) != '.') && (string.charAt(i+4) != '.')) {
+                        break;
+                    }
+                    else {
+                        i++;
+                    }
+                }
+                else {
+                    i++;
+                }
+            }
+            
+            i++;
+            
+            // Lê a letra da origem
+            var c = string.charAt(i);
+            c = rowForChar(c);
+            i++;
+            
+            if (c != 9) {
+                
+                console.log("hue: ", c);
+                
+                // Lê o número da origem
+                var n = parseInt(string.substr(i, i));
+                
+                // Pula o traço
+                i += 2;
+                
+                console.log("hue: ", n);
+                
+                // Lê a letra do destino
+                var c2 = string.charAt(i);
+                c2 = rowForChar(c2);
+                i++;
+                
+                console.log("hue: ", c2);
+                
+                // Lê o número do destino
+                var n2 = parseInt(string.substr(i, i));
+                i++;
+                
+                console.log("hue: ", n2);
+                
+                // Se tem uma letra depois é porque um peao foi promovido
+                if (string.charAt(i) != ' ' && string.charAt(i) != '\n' && string.charAt(i) != '{') {
+                    var newJob = -1;
+                    if (string.charAt(i) == 'r') newJob = 0;
+                    if (string.charAt(i) == 'n') newJob = 1;
+                    if (string.charAt(i) == 'b') newJob = 2;
+                    if (string.charAt(i) == 'q') newJob = 4;
+                }
+                
+                newPlay(c, n, c2, n2, newJob);
+            }
+            else {
+                i = 99999999999;
+            }
+        }
+    }
+    
+
+    resetPlays();
+    
+}
+
+
+function rowForChar(c) {
+    console.log("row for: ", c);
+    if (c == "a") return 1;
+    if (c == "b") return 2;
+    if (c == "c") return 3;
+    if (c == "d") return 4;
+    if (c == "e") return 5;
+    if (c == "f") return 6;
+    if (c == "g") return 7;
+    if (c == "h") return 8;
+    
+    return 9;
+}
+
+
+
+
+
+
+
 // Cria uma nova jogada e insere ela na fila
 function newPlay (fromX, fromY, toX, toY, promotion) {
+    console.log("HERE COMES A NEW PLAY!");
     fromX -= 1;
     fromY -= 1;
     toX -= 1;
@@ -977,6 +1124,7 @@ function newPlay (fromX, fromY, toX, toY, promotion) {
     
     // Adiciona a nova jogada ao vetor de jogadas
     plays.push(p);
+    console.log("NEW PLAY IS DOOOOONE!!");
 }
 
 // Inicializa os valores da jogada que precisam ser pegos na hora
@@ -1028,6 +1176,8 @@ function initPlay() {
     }
     
     
+    this.deadPiece = null;
+    
     // Se for um peão
     if (this.piece.job == 5) {
         // Checa se ele está andando duas casas
@@ -1057,7 +1207,11 @@ function initPlay() {
             enPassantPawnLocation = vec2(-1, -1);
         }
     }
-    else {
+    
+    
+    
+    
+    if (this.deadPiece == null) {
         // Em jogadas normais (nao-en-passant), a peça comida é a que está no destino
         this.deadPiece = getPiece(this.bDestination[0], this.bDestination[1]);
     }
@@ -1557,7 +1711,23 @@ function RotTrackball(v) {
     v = vec2(v[0]/(screenWidth*2), v[1]/(screenHeight*2));
     var q = vec3(v[0], getY(v), v[1]);
     
-    
+//    // Acha o ângulo que vamos girar em cada sentido
+//    var a1 = angle(p, vec3(v[0], getY(vec2(v[0],  0.0)),  0.0));
+//    var a2 = angle(p, vec3( 0.0, getY(vec2( 0.0, v[1])), v[1]));
+//    
+//    // Rodar o ponto q, t radianos ao redor de um vetor v
+//    // q é 4D, v é 3D
+////    function quatRot(q, v, t) {
+//    
+//    var vecY = vcross(eyeAbs, p);
+//    var norm = norm3(vecY);
+//    vecy = vec3(vecY[0]/norm, vecY[0]/norm, vecY[0]/norm);
+//    
+//    var rotX = quatRot(eyeAbs, a1, p);
+//    eyeAbs = quatRot(rotX, a2, vecY);
+//    
+//    var rotUpX = quatRot(up, a1, p);
+//    up = quatRot(rotUpX, a2, vecY);
     
     // Calcula o vetor pelo qual rodar e o ângulo de rotação sobre ele
     var c = vcross(p, q);
@@ -1804,6 +1974,7 @@ function handleMouseMove(event) {
         // Roda a cena de acordo
         var velocidade = 4;
         rotation = RotTrackball(vec2(velocidade * deltaX, velocidade * deltaY));
+//        rotation = mat4();
         
         hasToUpdateLookAt = true;
     }
