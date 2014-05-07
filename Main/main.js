@@ -1427,7 +1427,7 @@ function norm2(p) {
 
 // Produto vetorial 3D
 function vcross(p, v) {
-    return vec3(p[0] * v[1] - p[1] * v[0], - p[0] * v[2] + p[2] * v[0], p[1] * v[2] - p[2] * v[1]);
+    return vec3(p[1] * v[2] - p[2] * v[1], - p[2] * v[0] + p[0] * v[2], p[0] * v[1] - p[1] * v[0]);
 }
 
 // Produto interno 3D
@@ -1453,9 +1453,9 @@ function angle(p, q) {
     return Math.acos(c/(a*b));
 }
 
-// "Projeção" de um ponto (x,z) para um (x,y,z) na esfera unitária
+// "Projeção" de um ponto (x,y) para um (x,y,z) na esfera unitária
 // (Mousepad para Trackball)
-function getY(p) {
+function getZ(p) {
     return Math.sqrt(1 - norm2(p));
 }
 
@@ -1692,11 +1692,11 @@ function RotTrackball(v) {
     var m = mat4();
     
     // Cria o p
-    var p = vec3(0.0, 1.0, 0.0);
+    var p = vec3(0.0, 0.0, 1.0);
     
     // Acha o q na esfera
-    v = vec2(v[0]/(screenWidth*2), v[1]/(screenHeight*2));
-    var q = vec3(v[0], getY(v), v[1]);
+    v = vec2(-v[0]/(screenWidth*2), -v[1]/(screenHeight*2));
+    var q = vec3(v[0], v[1], getZ(v));
     
     // Calcula o vetor pelo qual rodar e o ângulo de rotação sobre ele
     var c = vcross(p, q);
@@ -1707,6 +1707,7 @@ function RotTrackball(v) {
     // Calcula a norma do vetor resultante
     var n = norm3(c);
     
+    
     // Se a norma for 0 é porque a diferença entre p e q é pequena
     // demais. Por isso, e para não dividirmos algo por 0, ignoramos
     // essa rotação.
@@ -1715,41 +1716,42 @@ function RotTrackball(v) {
         c = vec4(c[0]/n, c[1]/n, c[2]/n, 0.0);
         
         // Por causa do jeito como criamos p, este vetor está
-        // no plano y = 0. Queremos rodá-lo até o eixo z. Para isso,
-        // Consideramos o ângulo entre c e o eixo z.
+        // no plano z = 0. Queremos rodá-lo até o eixo y. Para isso,
+        // Consideramos o ângulo entre c e o eixo y.
         
         // A componente x do vetor vai ser o seno do ângulo
-        // entre c e o eixo z. A componente z vai ser o cosseno.
+        // entre c e o eixo y. A componente y vai ser o cosseno.
         
-        // Calcula a rotação em y
-        var Ry  = [vec4(  c[2],   0.0,  c[0],   0.0),
-                   vec4(   0.0,   1.0,   0.0,   0.0),
-                   vec4( -c[0],   0.0,  c[2],   0.0),
+        // Calcula a rotação em z
+        var Rz  = [vec4(  c[1],   c[0],  0.0,   0.0),
+                   vec4( -c[0],   c[1],  0.0,   0.0),
+                   vec4(   0.0,   0.0,   1.0,   0.0),
                    vec4(   0.0,   0.0,   0.0,   1.0) ];
         
         // E a rotação de volta, com o ângulo negativo
-        var Rmy = [vec4(  c[2],   0.0, -c[0],   0.0),
-                   vec4(   0.0,   1.0,   0.0,   0.0),
-                   vec4(  c[0],   0.0,  c[2],   0.0),
+        var Rmz = [vec4(  c[1],  -c[0],  0.0,   0.0),
+                   vec4(  c[0],   c[1],  0.0,   0.0),
+                   vec4(   0.0,   0.0,   1.0,   0.0),
                    vec4(   0.0,   0.0,   0.0,   1.0) ];
         
-        // Calcula a rotação em z
+        // Calcula a rotação em y
         // a é o ângulo entre p e q, o ângulo em que queremos
         // rodar cena
         var cos = Math.cos(a);
         var sin = Math.sin(a);
         
-        var Rz = [vec4( cos, -sin, 0.0, 0.0),
-                  vec4( sin,  cos, 0.0, 0.0),
-                  vec4( 0.0,  0.0, 1.0, 0.0),
-                  vec4( 0.0,  0.0, 0.0, 1.0) ];
+        var Ry = [vec4( cos, 0.0, -sin, 0.0),
+                  vec4( 0.0, 1.0,  0.0, 0.0),
+                  vec4( sin, 0.0,  cos, 0.0),
+                  vec4( 0.0, 0.0,  0.0, 1.0) ];
         
         // Calcula a rotação final
-        // R = R(-y)R(z)R(y)
-        var m = times(Rmy, times(Rz, Ry));
+        // R = R(-z)R(y)R(z)
+        var m = times(Rmz, times(Ry, Rz));
     }
     // Se a norma for 0, vamos usar a matriz identidade criada na
     // declaração de m, que equivale a uma rotação por 0 graus.
+    
     
     return m;
 }
