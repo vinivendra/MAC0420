@@ -31,7 +31,7 @@ var verticesStart = 0;      // Inteiro para saber onde cada peça começa
 var points = [];            // Vértices ordenados por face
 var previousPointsSize = 0; // Tamanho acumulativo do vetor de vértices,
                             // para saber onde cada peça começa e acaba nele
-var colors = [];            // Vetor de cores dos vértices
+var colors = [];            // Vetor para calcular as cores dos vértices
 var tabSize = 0;            // Número de vértices do tabuleiro
 var tabMatrix = mat4();     // Matriz do tabuleiro
 
@@ -149,14 +149,6 @@ window.onload = function init()
     
     
     // Lê os *.obj
-
-//    readObj('Pecas/torre.obj');
-//    readObj('Pecas/cavalo.obj');
-//    readObj('Pecas/bispo.obj');
-//    readObj('Pecas/rei.obj');
-//    readObj('Pecas/rainha.obj');
-//    readObj('Pecas/peao.obj');
-
     objNames = ['Pecas/torre.obj',
                 'Pecas/cavalo.obj',
                 'Pecas/bispo.obj',
@@ -237,7 +229,7 @@ function finishInit() {
     gl.enableVertexAttribArray( vPosition );
     
     
-    
+    // Idem, para o vetor de "cores"
     var cBuffer = gl.createBuffer();
     gl.bindBuffer( gl.ARRAY_BUFFER, cBuffer );
     gl.bufferData( gl.ARRAY_BUFFER, flatten(colors), gl.DYNAMIC_DRAW );
@@ -259,6 +251,7 @@ function finishInit() {
     document.getElementById("Button1").onclick = changeProjection;
     document.getElementById("Button2").onclick = pausePlayPlayback;
     document.getElementById("Button3").onclick = resetPlays;
+    document.getElementById("Button4").onclick = loadDefaultPGN;
     
     
     // Inicializa a matriz lookat na posição inicial desejada (arbitrária)
@@ -281,113 +274,16 @@ function finishInit() {
     
     // Inicializa o vetor de jogadas (nao deve ficar aqui)
     if (window.File) {
-        console.log("SUCESSO");
-        
         fileInput.addEventListener('change', handleFileSelect);
     }
     else {
-        newPlay(5,7,5,5,-1);
-        newPlay(7,1,6,3,-1);
-        newPlay(2,8,3,6,-1);
-        newPlay(6,1,2,5,-1);
-        newPlay(1,7,1,6,-1);
+        console.log("API de abertura de arquivos não encontrada. Carregando partida default.");
+        
+        loadDefaultPGN();
     }
     
     
-    
-    // Exemplo de en passant
-//    newPlay(5,2,5,4);
-//    newPlay(5,8,5,3);
-//    newPlay(7,1,6,3);
-//    newPlay(2,8,3,6);
-    
-    
-    // Partida com 2 roques curtos
-//    newPlay(5,2,5,4,1);
-//    newPlay(5,7,5,5,-1);
-//    newPlay(7,1,6,3,-1);
-//    newPlay(2,8,3,6,-1);
-//    newPlay(6,1,2,5,-1);
-//    newPlay(1,7,1,6,-1);
-//    newPlay(2,5,1,4);
-//    newPlay(7,8,6,6);
-//    newPlay(5,1,7,1);
-//    newPlay(6,8,5,7);
-//    newPlay(6,1,5,1);
-//    newPlay(2,7,2,5);
-//    newPlay(1,4,2,3);
-//    newPlay(4,7,4,6);
-//    newPlay(3,2,3,3);
-//    newPlay(5,8,7,8);
-//    newPlay(8,2,8,3);
-//    newPlay(3,6,2,8);
-//    newPlay(4,2,4,4);
-//    newPlay(2,8,4,7);
-//    newPlay(3,3,3,4);
-//    newPlay(3,7,3,6);
-//    newPlay(3,4,2,5);
-//    newPlay(1,6,2,5);
-//    newPlay(2,1,3,3);
-//    newPlay(3,8,2,7);
-//    newPlay(3,1,7,5);
-//    newPlay(2,5,2,4);
-//    newPlay(3,3,2,1);
-//    newPlay(8,7,8,6);
-//    newPlay(7,5,8,4);
-//    newPlay(3,6,3,5);
-//    newPlay(4,4,5,5);
-//    newPlay(6,6,5,4);
-//    newPlay(8,4,5,7);
-//    newPlay(4,8,5,7);
-//    newPlay(5,5,4,6);
-//    newPlay(5,7,6,6);
-//    newPlay(2,1,4,2);
-//    newPlay(5,4,4,6);
-//    newPlay(4,2,3,4);
-//    newPlay(4,6,3,4);
-//    newPlay(2,3,3,4);
-//    newPlay(4,7,2,6);
-//    newPlay(6,3,5,5);
-//    newPlay(1,8,5,8);
-//    newPlay(3,4,6,7);
-//    newPlay(6,8,6,7);
-//    newPlay(5,5,6,7);
-//    newPlay(5,8,5,1);
-//    newPlay(4,1,5,1);
-//    newPlay(7,8,6,7);
-//    newPlay(5,1,5,3);
-//    newPlay(6,6,7,5);
-//    newPlay(5,3,7,5);
-//    newPlay(8,6,7,5);
-//    newPlay(2,2,2,3);
-//    newPlay(6,7,5,6);
-//    newPlay(1,2,1,3);
-//    newPlay(5,6,4,6);
-//    newPlay(1,3,2,4);
-//    newPlay(3,5,2,4);
-//    newPlay(1,1,1,5);
-//    newPlay(2,6,4,5);
-//    newPlay(6,2,6,3);
-//    newPlay(2,7,3,8);
-//    newPlay(7,1,6,2);
-//    newPlay(3,8,6,5);
-//    newPlay(1,5,1,7);
-//    newPlay(7,7,7,6);
-//    newPlay(1,7,1,6);
-//    newPlay(4,6,3,5);
-//    newPlay(6,2,5,1);
-//    newPlay(4,5,6,4);
-//    newPlay(7,2,7,3);
-//    newPlay(6,4,8,3);
-//    newPlay(5,1,4,2);
-//    newPlay(3,5,2,5);
-//    newPlay(1,6,4,6);
-//    newPlay(2,5,3,5);
-//    newPlay(4,6,1,6);
-//    newPlay(8,3,6,2);
-//    newPlay(7,3,7,4);
-//    newPlay(6,5,4,3);
-//    newPlay(1,6,5,6);
+    // Roda as jogadas, se houver alguma
     runPlays();
     
     
@@ -452,7 +348,100 @@ function handleFileSelect(evt) {
 }
 
 
-
+// Carrega o PGN padrao
+function loadDefaultPGN() {
+    plays = [];
+    
+    newPlay(5,2,5,4,-1);
+    newPlay(5,7,5,5,-1);
+    newPlay(7,1,6,3,-1);
+    newPlay(2,8,3,6,-1);
+    newPlay(6,1,2,5,-1);
+    newPlay(1,7,1,6,-1);
+    newPlay(2,5,1,4,-1);
+    newPlay(7,8,6,6,-1);
+    newPlay(5,1,7,1,-1);
+    newPlay(6,8,5,7,-1);
+    newPlay(6,1,5,1,-1);
+    newPlay(2,7,2,5,-1);
+    newPlay(1,4,2,3,-1);
+    newPlay(4,7,4,6,-1);
+    newPlay(3,2,3,3,-1);
+    newPlay(5,8,7,8,-1);
+    newPlay(8,2,8,3,-1);
+    newPlay(3,6,2,8,-1);
+    newPlay(4,2,4,4,-1);
+    newPlay(2,8,4,7,-1);
+    newPlay(3,3,3,4,-1);
+    newPlay(3,7,3,6,-1);
+    newPlay(3,4,2,5,-1);
+    newPlay(1,6,2,5,-1);
+    newPlay(2,1,3,3,-1);
+    newPlay(3,8,2,7,-1);
+    newPlay(3,1,7,5,-1);
+    newPlay(2,5,2,4,-1);
+    newPlay(3,3,2,1,-1);
+    newPlay(8,7,8,6,-1);
+    newPlay(7,5,8,4,-1);
+    newPlay(3,6,3,5,-1);
+    newPlay(4,4,5,5,-1);
+    newPlay(6,6,5,4,-1);
+    newPlay(8,4,5,7,-1);
+    newPlay(4,8,5,7,-1);
+    newPlay(5,5,4,6,-1);
+    newPlay(5,7,6,6,-1);
+    newPlay(2,1,4,2,-1);
+    newPlay(5,4,4,6,-1);
+    newPlay(4,2,3,4,-1);
+    newPlay(4,6,3,4,-1);
+    newPlay(2,3,3,4,-1);
+    newPlay(4,7,2,6,-1);
+    newPlay(6,3,5,5,-1);
+    newPlay(1,8,5,8,-1);
+    newPlay(3,4,6,7,-1);
+    newPlay(6,8,6,7,-1);
+    newPlay(5,5,6,7,-1);
+    newPlay(5,8,5,1,-1);
+    newPlay(4,1,5,1,-1);
+    newPlay(7,8,6,7,-1);
+    newPlay(5,1,5,3,-1);
+    newPlay(6,6,7,5,-1);
+    newPlay(5,3,7,5,-1);
+    newPlay(8,6,7,5,-1);
+    newPlay(2,2,2,3,-1);
+    newPlay(6,7,5,6,-1);
+    newPlay(1,2,1,3,-1);
+    newPlay(5,6,4,6,-1);
+    newPlay(1,3,2,4,-1);
+    newPlay(3,5,2,4,-1);
+    newPlay(1,1,1,5,-1);
+    newPlay(2,6,4,5,-1);
+    newPlay(6,2,6,3,-1);
+    newPlay(2,7,3,8,-1);
+    newPlay(7,1,6,2,-1);
+    newPlay(3,8,6,5,-1);
+    newPlay(1,5,1,7,-1);
+    newPlay(7,7,7,6,-1);
+    newPlay(1,7,1,6,-1);
+    newPlay(4,6,3,5,-1);
+    newPlay(6,2,5,1,-1);
+    newPlay(4,5,6,4,-1);
+    newPlay(7,2,7,3,-1);
+    newPlay(6,4,8,3,-1);
+    newPlay(5,1,4,2,-1);
+    newPlay(3,5,2,5,-1);
+    newPlay(1,6,4,6,-1);
+    newPlay(2,5,3,5,-1);
+    newPlay(4,6,1,6,-1);
+    newPlay(8,3,6,2,-1);
+    newPlay(7,3,7,4,-1);
+    newPlay(6,5,4,3,-1);
+    newPlay(1,6,5,6,-1);
+    
+    resetPlays();
+    
+    console.log("TODO O HUE");
+}
 
 
 
@@ -977,7 +966,8 @@ function promote(piece, i) {
 // Lê um arquivo PGN e cria uma nova jogada
 function newPGN(string) {
     var i = 0;
-    plays = [];    
+    plays = [];
+    var newJob = -1;
     
     // Pula linhas em branco
     while (string.charAt(i) == '\n')
@@ -1026,32 +1016,25 @@ function newPGN(string) {
             
             if (c != 9) {
                 
-                console.log("hue: ", c);
-                
                 // Lê o número da origem
                 var n = parseInt(string.substr(i, i));
                 
                 // Pula o traço
                 i += 2;
                 
-                console.log("hue: ", n);
-                
                 // Lê a letra do destino
                 var c2 = string.charAt(i);
                 c2 = rowForChar(c2);
                 i++;
                 
-                console.log("hue: ", c2);
-                
                 // Lê o número do destino
                 var n2 = parseInt(string.substr(i, i));
                 i++;
                 
-                console.log("hue: ", n2);
+                newJob = -1;
                 
                 // Se tem uma letra depois é porque um peao foi promovido
                 if (string.charAt(i) != ' ' && string.charAt(i) != '\n' && string.charAt(i) != '{') {
-                    var newJob = -1;
                     if (string.charAt(i) == 'r') newJob = 0;
                     if (string.charAt(i) == 'n') newJob = 1;
                     if (string.charAt(i) == 'b') newJob = 2;
@@ -1071,8 +1054,8 @@ function newPGN(string) {
 }
 
 
+// Retorna o número de uma fila a partir da letra correspondente
 function rowForChar(c) {
-    console.log("row for: ", c);
     if (c == "a") return 1;
     if (c == "b") return 2;
     if (c == "c") return 3;
@@ -1091,9 +1074,8 @@ function rowForChar(c) {
 
 
 
-// Cria uma nova jogada e insere ela na fila
+// Cria uma nova jogada e insere ela no vetor
 function newPlay (fromX, fromY, toX, toY, promotion) {
-    console.log("HERE COMES A NEW PLAY!");
     fromX -= 1;
     fromY -= 1;
     toX -= 1;
@@ -1130,7 +1112,6 @@ function newPlay (fromX, fromY, toX, toY, promotion) {
     
     // Adiciona a nova jogada ao vetor de jogadas
     plays.push(p);
-    console.log("NEW PLAY IS DOOOOONE!!");
 }
 
 // Inicializa os valores da jogada que precisam ser pegos na hora
@@ -1717,24 +1698,6 @@ function RotTrackball(v) {
     v = vec2(v[0]/(screenWidth*2), v[1]/(screenHeight*2));
     var q = vec3(v[0], getY(v), v[1]);
     
-//    // Acha o ângulo que vamos girar em cada sentido
-//    var a1 = angle(p, vec3(v[0], getY(vec2(v[0],  0.0)),  0.0));
-//    var a2 = angle(p, vec3( 0.0, getY(vec2( 0.0, v[1])), v[1]));
-//    
-//    // Rodar o ponto q, t radianos ao redor de um vetor v
-//    // q é 4D, v é 3D
-////    function quatRot(q, v, t) {
-//    
-//    var vecY = vcross(eyeAbs, p);
-//    var norm = norm3(vecY);
-//    vecy = vec3(vecY[0]/norm, vecY[0]/norm, vecY[0]/norm);
-//    
-//    var rotX = quatRot(eyeAbs, a1, p);
-//    eyeAbs = quatRot(rotX, a2, vecY);
-//    
-//    var rotUpX = quatRot(up, a1, p);
-//    up = quatRot(rotUpX, a2, vecY);
-    
     // Calcula o vetor pelo qual rodar e o ângulo de rotação sobre ele
     var c = vcross(p, q);
     
@@ -1827,9 +1790,6 @@ function updateEye() {
 }
 
 
-sv - sn
-zn - zv
-zn = zv * sv / sn
 
 
 
@@ -1979,7 +1939,7 @@ function handleMouseMove(event) {
     var deltaY = newY - lastMouseY;
     
     // Se estamos dando zoom
-    if (mouseRDown) {
+    if (mouseRDown || event.shiftKey) {
         var dy = 1 - deltaY/screenHeight;
         eyeAbs = vec3(eyeAbs[0] * dy, eyeAbs[1] * dy, eyeAbs[2] * dy);
         orthoZoom *= dy;
