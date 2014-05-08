@@ -63,8 +63,6 @@ var promoted = [];
 
 // ===================================================================================================
 /* Variáveis de view */
-// Matriz para rodar o eye e o up
-var rotation = mat4();
 
 // Variáveis usadas no lookat
 var eyeAbs = vec3();                // Eye "absoluto", sem considerar o tamanho da janela
@@ -91,6 +89,9 @@ var projec = mat4();                // Matriz de projeção
 
 // ===================================================================================================
 /* Callbacks */
+// Keyboard
+var currentlyPressedKeys = [];  // Vetor que guarda se uma tecla está apertada ou não
+
 // Mouse
 var mouseDown = false;      // Flag que indica se o botão esquerdo está apertado
 var mouseRDown = false;     // Flag que indica se o botão direito está apertado
@@ -196,6 +197,8 @@ function finishInit() {
     document.onmouseup = handleMouseUp;
     document.onmousemove = handleMouseMove;
     
+    document.onkeydown = handleKeyDown;
+    document.onkeyup = handleKeyUp;
 
     
     
@@ -1755,6 +1758,8 @@ function RotTrackball(v) {
         eyeAbs = newEye;
     }
     
+    hasToUpdateLookAt = true;
+    
     return m;
     
     
@@ -1828,11 +1833,8 @@ function RotTrackball(v) {
 function finalizeRotation() {
     // Roda o eyeAbs e o up do LookAt
     if (hasToUpdateLookAt) {
-        eyeAbs = timesMV3(rotation, eyeAbs);    // Roda o eye absoluto
         updateEye();                            // Calcula o eye baseado no eyeAbs e
                                                 // no tamanho da janela
-        up = timesMV3(rotation, up);            // Calcula o Up
-        rotation = mat4();                      // Zera a rotação, que não é cumulativa
         
         lookat = lookAt(eye, at, up);           // Calcula o lookat
         
@@ -2020,10 +2022,7 @@ function handleMouseMove(event) {
     else if (mouseDown) {
         // Roda a cena de acordo
         var velocidade = 4;
-        rotation = RotTrackball(vec2(velocidade * deltaX, velocidade * deltaY));
-//        rotation = mat4();
-        
-        hasToUpdateLookAt = true;
+        RotTrackball(vec2(velocidade * deltaX, velocidade * deltaY));
     }
     
     // Atualiza a posição "anterior" do mouse
@@ -2034,8 +2033,42 @@ function handleMouseMove(event) {
 //    requestAnimFrame(render);
 }
 
+// Callback próprio para lidar com as teclas
+function handleKeys() {
+    var ySpeed = 0;
+    var xSpeed = 0;
+    if (currentlyPressedKeys[37] == true) {
+        // Left cursor key
+        ySpeed -= 1;
+    }
+    if (currentlyPressedKeys[39] == true) {
+        // Right cursor key
+        ySpeed += 1;
+    }
+    if (currentlyPressedKeys[38] == true) {
+        // Up cursor key
+        xSpeed -= 1;
+    }
+    if (currentlyPressedKeys[40] == true) {
+        // Down cursor key
+        xSpeed += 1;
+    }
+    
+    if (xSpeed != 0 || ySpeed != 0) {
+        RotTrackball(vec2(ySpeed * 30, xSpeed * 30));
+    }
+    
+}
 
 
+// Callbacks do teclado
+function handleKeyDown(event) {
+    currentlyPressedKeys[event.keyCode] = true;
+}
+
+function handleKeyUp(event) {
+    currentlyPressedKeys[event.keyCode] = false;
+}
 
 
 
@@ -2072,6 +2105,9 @@ function handleMouseMove(event) {
 
 /* RENDERING */
 function render() {
+    
+    // Callback para executar as ações referentes ao teclado
+    handleKeys();
     
     // Limpa a tela
     gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
