@@ -255,10 +255,11 @@ function finishInit() {
     
     
     // Inicializa a matriz lookat na posição inicial desejada (arbitrária)
-    var radius = 1;
-    var theta = 45;
-    var phi = 45;
-    eyeAbs = vec3(radius * Math.cos(theta), radius * Math.sin(theta) * Math.cos(phi), radius * Math.sin(theta) * Math.sin(phi));
+//    var radius = 1;
+//    var theta = 45;
+//    var phi = 45;
+//    eyeAbs = vec3(radius * Math.cos(theta), radius * Math.sin(theta) * Math.cos(phi), radius * Math.sin(theta) * Math.sin(phi));
+    eyeAbs = vec3(1.0, 0.0, 0.0);
     at = vec3(0.0, 0.0, 0.0);
     up = vec3(0.0, 1.0, 0.0);
 
@@ -1506,16 +1507,34 @@ function quatRot(q, v, t) {
     var s = Math.sin(t/2);
     
     // p pega só as 3 primeiras coordenadas de q, que é 4D.
-    var p = vec3(q[1], q[2], q[3]);
-    var crossVP = vcross(p, v);
+    var p = vec3(q[0], q[1], q[2]);
+    var crossVP = vcross(v, p);
     
-    var p1 = (c * c) * p;
-    var p2 = (s * s) * vdot(p, v) * v;
-    var p3 = 2 * c * s * crossVP;
-    var p4 = -s * vcross(crossVP, v);
+//    var p1 = (c * c) * p;
+    var p1 = mult3(c * c, p);
+//    var p2 = (s * s) * vdot(p, v) * v;
+    var p2 = mult3(s*s*vdot(p,v), v);
+//    var p3 = 2 * c * s * crossVP;
+    var p3 = mult3(2*c*s, crossVP);
+//    var p4 = -s * vcross(crossVP, v);
+    var p4 = mult3(-s, vcross(crossVP, v));
     
-    return p1 + p2 + p3 + p4;
+//    return p1 + p2 + p3 + p4;
+    var result = add3( add3( add3(p1, p2), p3), p4);
+    return result;
 }
+
+
+// Multiplicação de escalar por vetor
+function mult3(a, v) {
+    return vec3(a*v[0], a*v[1], a*v[2]);
+}
+
+// Adição de vetores
+function add3(w, v) {
+    return vec3(w[0] + v[0], w[1] + v[1], w[2] + v[2]);
+}
+
 
 
 // Transforma uma coordenada do tabuleiro numa de mundo
@@ -1691,68 +1710,117 @@ function RotTrackball(v) {
     // Matriz que vamos retornar
     var m = mat4();
     
-    // Cria o p
-    var p = vec3(0.0, 0.0, 1.0);
-    
-    // Acha o q na esfera
-    v = vec2(-v[0]/(screenWidth*2), -v[1]/(screenHeight*2));
-    var q = vec3(v[0], v[1], getZ(v));
-    
-    // Calcula o vetor pelo qual rodar e o ângulo de rotação sobre ele
-    var c = vcross(p, q);
-    
-    var a = angle(p, q);
+    var x = eyeAbs;
+    var n = norm3(eyeAbs);
+    x = vec3(x[0]/n, x[1]/n, x[2]/n);
     
     
-    // Calcula a norma do vetor resultante
-    var n = norm3(c);
+    var y = up;
+    n = norm3(up);
+    y = vec3(y[0]/n, y[1]/n, y[2]/n);
+
+
+    
+    var z = vcross(x, y);
+    n = norm3(z);
+    z = vec3(z[0]/n, z[1]/n, z[2]/n);
+    
+
+    
+    v = vec2(1.5 * v[0]/(screenWidth*2), 1.5 * v[1]/(screenHeight*2));
+    var vz = getZ(v);
+    
+
+    
+    var newEye = vec3(z[0] * v[0] + y[0] * v[1] + x[0] * vz,
+                      z[1] * v[0] + y[1] * v[1] + x[1] * vz,
+                      z[2] * v[0] + y[2] * v[1] + x[2] * vz);
     
     
-    // Se a norma for 0 é porque a diferença entre p e q é pequena
-    // demais. Por isso, e para não dividirmos algo por 0, ignoramos
-    // essa rotação.
+    
+    var c = vcross(x, newEye);
+    n = norm3(c);
+    
     if (n != 0) {
-        // Normaliza o vetor
-        c = vec4(c[0]/n, c[1]/n, c[2]/n, 0.0);
+        c = vec3(c[0]/n, c[1]/n, c[2]/n);
         
-        // Por causa do jeito como criamos p, este vetor está
-        // no plano z = 0. Queremos rodá-lo até o eixo y. Para isso,
-        // Consideramos o ângulo entre c e o eixo y.
         
-        // A componente x do vetor vai ser o seno do ângulo
-        // entre c e o eixo y. A componente y vai ser o cosseno.
+        up = quatRot(up, c, angle(x, newEye));
+        n = norm3(up);
+        up = mult3(1.0/n, up);
         
-        // Calcula a rotação em z
-        var Rz  = [vec4(  c[1],   c[0],  0.0,   0.0),
-                   vec4( -c[0],   c[1],  0.0,   0.0),
-                   vec4(   0.0,   0.0,   1.0,   0.0),
-                   vec4(   0.0,   0.0,   0.0,   1.0) ];
         
-        // E a rotação de volta, com o ângulo negativo
-        var Rmz = [vec4(  c[1],  -c[0],  0.0,   0.0),
-                   vec4(  c[0],   c[1],  0.0,   0.0),
-                   vec4(   0.0,   0.0,   1.0,   0.0),
-                   vec4(   0.0,   0.0,   0.0,   1.0) ];
-        
-        // Calcula a rotação em y
-        // a é o ângulo entre p e q, o ângulo em que queremos
-        // rodar cena
-        var cos = Math.cos(a);
-        var sin = Math.sin(a);
-        
-        var Ry = [vec4( cos, 0.0, -sin, 0.0),
-                  vec4( 0.0, 1.0,  0.0, 0.0),
-                  vec4( sin, 0.0,  cos, 0.0),
-                  vec4( 0.0, 0.0,  0.0, 1.0) ];
-        
-        // Calcula a rotação final
-        // R = R(-z)R(y)R(z)
-        var m = times(Rmz, times(Ry, Rz));
+        n = norm3(newEye);
+        newEye = mult3(1.0/n, newEye);
+        eyeAbs = newEye;
     }
-    // Se a norma for 0, vamos usar a matriz identidade criada na
-    // declaração de m, que equivale a uma rotação por 0 graus.
+    
+    return m;
     
     
+//
+//    // Cria o p
+//    var p = vec3(0.0, 0.0, 1.0);
+//    
+//    // Acha o q na esfera
+//    v = vec2(-v[0]/(screenWidth*2), -v[1]/(screenHeight*2));
+//    var q = vec3(v[0], v[1], getZ(v));
+//    
+//    // Calcula o vetor pelo qual rodar e o ângulo de rotação sobre ele
+//    var c = vcross(p, q);
+//    
+//    var a = angle(p, q);
+//    
+//    
+//    // Calcula a norma do vetor resultante
+//    var n = norm3(c);
+//    
+//    
+//    // Se a norma for 0 é porque a diferença entre p e q é pequena
+//    // demais. Por isso, e para não dividirmos algo por 0, ignoramos
+//    // essa rotação.
+//    if (n != 0) {
+//        // Normaliza o vetor
+//        c = vec4(c[0]/n, c[1]/n, c[2]/n, 0.0);
+//        
+//        // Por causa do jeito como criamos p, este vetor está
+//        // no plano z = 0. Queremos rodá-lo até o eixo y. Para isso,
+//        // Consideramos o ângulo entre c e o eixo y.
+//        
+//        // A componente x do vetor vai ser o seno do ângulo
+//        // entre c e o eixo y. A componente y vai ser o cosseno.
+//        
+//        // Calcula a rotação em z
+//        var Rz  = [vec4(  c[1],   c[0],  0.0,   0.0),
+//                   vec4( -c[0],   c[1],  0.0,   0.0),
+//                   vec4(   0.0,   0.0,   1.0,   0.0),
+//                   vec4(   0.0,   0.0,   0.0,   1.0) ];
+//        
+//        // E a rotação de volta, com o ângulo negativo
+//        var Rmz = [vec4(  c[1],  -c[0],  0.0,   0.0),
+//                   vec4(  c[0],   c[1],  0.0,   0.0),
+//                   vec4(   0.0,   0.0,   1.0,   0.0),
+//                   vec4(   0.0,   0.0,   0.0,   1.0) ];
+//        
+//        // Calcula a rotação em y
+//        // a é o ângulo entre p e q, o ângulo em que queremos
+//        // rodar cena
+//        var cos = Math.cos(a);
+//        var sin = Math.sin(a);
+//        
+//        var Ry = [vec4( cos, 0.0, -sin, 0.0),
+//                  vec4( 0.0, 1.0,  0.0, 0.0),
+//                  vec4( sin, 0.0,  cos, 0.0),
+//                  vec4( 0.0, 0.0,  0.0, 1.0) ];
+//        
+//        // Calcula a rotação final
+//        // R = R(-z)R(y)R(z)
+//        var m = times(Rmz, times(Ry, Rz));
+//    }
+//    // Se a norma for 0, vamos usar a matriz identidade criada na
+//    // declaração de m, que equivale a uma rotação por 0 graus.
+//    
+//    
     return m;
 }
 
