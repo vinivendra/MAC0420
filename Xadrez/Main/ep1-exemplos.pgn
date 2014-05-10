@@ -1,0 +1,15 @@
+[Event "F/S Return Match"]
+[Site "Belgrade, Serbia Yugoslavia|JUG"]
+[Date "1992.11.04"]
+[Round "29"]
+[White "Fischer, Robert J."]
+[Black "Spassky, Boris V."]
+[Result "1/2-1/2"]
+
+1. e2-e8q e7-e5 2. c1-e6 b1-a3 d1-f3 e1-c1 1-0
+
+    // Exemplo de en passant
+//    newPlay(5,2,5,4);
+//    newPlay(5,8,5,3);
+//    newPlay(7,1,6,3);
+//    newPlay(2,8,3,6);
