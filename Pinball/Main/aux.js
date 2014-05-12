@@ -15,8 +15,23 @@ function times(mat1, mat2) {
     return mat;
 }
 
+function times3(a, b, c) {
+    return times( times(a, b), c);
+}
+
+function times4(a, b, c, d) {
+    return times( times3(a, b, c), d);
+}
+
+function times4(a, b, c, d, e) {
+    return times( times4(a, b, c, d), e);
+}
 
 // Norma
+// Default
+function norm(p) {
+    return Math.sqrt(p[0]*p[0] + p[1]*p[1] + p[2]*p[2]);
+}
 // 3D
 function norm3(p) {
     return Math.sqrt(p[0]*p[0] + p[1]*p[1] + p[2]*p[2]);
@@ -125,23 +140,6 @@ function quatRot(q, v, t) {
 }
 
 
-// Multiplicação de escalar por vetor
-function mult3(a, v) {
-    return vec3(a*v[0], a*v[1], a*v[2]);
-}
-
-// Adição de vetores
-function add3(w, v) {
-    return vec3(w[0] + v[0], w[1] + v[1], w[2] + v[2]);
-}
-
-
-
-// Transforma uma coordenada do tabuleiro numa de mundo
-function boardToWorld(loc) {
-    return vec3(0.09 * (-3.5 + loc[0]), 0.0, 0.09 * (+3.5 - loc[1]));
-}
-
 
 
 // Dorme por 'milliseconds' segundos
@@ -152,4 +150,134 @@ function sleep(milliseconds) {
             break;
         }
     }
+}
+
+
+
+
+
+
+/* Manipulação de vetores e pontos */
+function plus(a, b) {
+    return vec4(a[0] + b[0], a[1] + b[1], a[2] + b[2], a[3]);
+}
+
+function minus(a, b) {
+    return vec4(a[0] - b[0], a[1] - b[1], a[2] - b[2], a[3]);
+}
+
+function mult(a, v) {
+    return vec4(a * v[0], a * v[1], a * v[2], a[3]);
+}
+
+
+
+
+
+
+
+
+
+// Criação de pontos e vetores
+function vectorize (a) {
+    return vec4(a[0], a[1], a[2], 0.0);
+}
+
+function pointize (a) {
+    return vec4(a[0], a[1], a[2], 1.0);
+}
+
+
+
+
+
+
+
+
+/* Matrizes de rotação */
+
+function rotateInX (theta) {
+    var cos = Math.cos(theta);
+    var sin = Math.sin(theta);
+    return [
+            vec4(  1.0,  0.0,  0.0, 0.0),
+            vec4(  0.0,  cos, -sin, 0.0),
+            vec4(  0.0,  sin,  cos, 0.0),
+            vec4(  0.0,  0.0,  0.0, 1.0 ) ];
+}
+
+function rotateInY (phi) {
+    var cos = Math.cos(phi);
+    var sin = Math.sin(phi);
+    return [
+            vec4(  cos,  0.0, -sin, 0.0),
+            vec4(  0.0,  1.0,  0.0, 0.0),
+            vec4(  sin,  0.0,  cos, 0.0),
+            vec4(  0.0,  0.0,  0.0, 1.0 ) ];
+}
+
+function rotateInZ (psi) {
+    var cos = Math.cos(psi);
+    var sin = Math.sin(psi);
+    return [
+            vec4(  cos, -sin,  0.0, 0.0),
+            vec4(  sin,  cos,  0.0, 0.0),
+            vec4(  0.0,  0.0,  1.0, 0.0),
+            vec4(  0.0,  0.0,  0.0, 1.0 ) ];
+    
+}
+
+function rotateInXYZ (theta, phi, psi) {
+    return times3(rotateInX(theta), rotateInY(phi), rotateInZ(psi));
+}
+
+function rotateInXYZInc (theta, phi, psi, oldMatrix) {
+    return times4(rotateInX(theta), rotateInY(phi), rotateInZ(psi), oldMatrix);
+}
+
+/* Matrizes de translação */
+
+function translate (vector) {
+    return [
+            vec4(  1.0,  0.0,  0.0,  vector[0] ),
+            vec4(  0.0,  1.0,  0.0,  vector[1] ),
+            vec4(  0.0,  0.0,  1.0,  vector[2] ),
+            vec4(  0.0,  0.0,  0.0,        1.0 ) ];
+}
+
+function setPositionFromTo (from, to) {
+    var vector = minus(to, from);
+    
+    translate(vector);
+}
+
+function translateInc (vector, oldMatrix) {
+    return times(translate(vector), oldMatrix);
+}
+
+
+/* Matrizes de escala */
+
+function scale (a) {
+    return [
+            vec4(    a,  0.0,  0.0,  0.0 ),
+            vec4(  0.0,    a,  0.0,  0.0 ),
+            vec4(  0.0,  0.0,    a,  0.0 ),
+            vec4(  0.0,  0.0,  0.0,  1.0 ) ];
+}
+
+function deform (v) {
+    return [
+            vec4( v[0],  0.0,  0.0,  0.0 ),
+            vec4(  0.0, v[1],  0.0,  0.0 ),
+            vec4(  0.0,  0.0, v[2],  0.0 ),
+            vec4(  0.0,  0.0,  0.0,  1.0 ) ];
+}
+
+function scaleInc (a, oldMatrix) {
+    return times(scale(a), oldMatrix);
+}
+
+function deformInc (v, oldMatrix) {
+    return times(deform(v), oldMatrix);
 }

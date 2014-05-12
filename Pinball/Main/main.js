@@ -99,24 +99,20 @@ function finishInit() {
     document.onkeyup = handleKeyUp;
     
     
-    
-    var ball = ({vertexEnd: 0, vertexStart: 0, string: objStrings[0],
-                objectWorldMatrix: [
-                      vec4(  0.2,  0,  0,  0 ),
-                      vec4(  0,  0.2,  0,  0 ),
-                      vec4(  0,  0,  0.2,  0 ),
-                      vec4(  0,  0,  0,  1 )   ],
-                });
+
+    readVertices(objStrings[0]);
+    var ballVertexRange = readFaces(objStrings[0]);
+    var ball = newObject(ballVertexRange, vec4(0.0, 0.0, 0.0, 1.0), 0.1);
     
     objects.push(ball);
     
-    readVertices(ball);
-    readFaces(ball);
+
+
     
     
     /* Configuração do WebGL */
     gl.viewport( 0, 0, canvas.width, canvas.height );
-    gl.clearColor( 0.8, 0.8, 0.8, 1.0 );
+    gl.clearColor( 0.1, 0.1, 0.1, 1.0 );
     
     
     
@@ -171,6 +167,8 @@ function finishInit() {
     updatePerspective();
     
     
+    objects[0].updateModelViewMatrix();
+    
     render();
 };
 
@@ -188,9 +186,18 @@ function finishInit() {
 
 
 
+
+
+
+
+
+
+
+
+
 /* INICIALIZAÇÃO DE OBJETOS */
 // Lê os vértices de cada peça e os armazena no vetor
-function readVertices(obj) {
+function readVertices(string) {
     /* Pula as quatro primeiras linhas:
      
      # Blender v2.70 (sub 0) OBJ File: ''
@@ -201,29 +208,29 @@ function readVertices(obj) {
     
     i = 0;
     for (var bla = 0; bla < 4; bla++) {
-        while (obj.string.charAt(i) != '\n') i++;
+        while (string.charAt(i) != '\n') i++;
         i++;
     }
     
     // Para cada linha começada com "v "
-    while (obj.string.charAt(i) == 'v' && obj.string.charAt(i+1) != 'n') {
+    while (string.charAt(i) == 'v' && string.charAt(i+1) != 'n') {
         i += 2;                     // Pula o "v "
         var j;                      // j vai para o fim de cada número
         var vertex = vec4();        // O novo vértice a ser adicionado
         
         // Leitura da coordenada x
-        for (j = i; obj.string.charAt(j) != ' '; j++);            // Acha o fim do número
-        vertex[0] = parseFloat(obj.string.substr(i, j-1)) / 2;    // Adiciona a coordenada ao novo vértice
+        for (j = i; string.charAt(j) != ' '; j++);            // Acha o fim do número
+        vertex[0] = parseFloat(string.substr(i, j-1)) / 2;    // Adiciona a coordenada ao novo vértice
         
         // Leitura da coordenada y
         i = j + 1;                                                  // Pula para o número seguinte
-        for (j = i; obj.string.charAt(j) != ' '; j++);
-        vertex[1] = parseFloat(obj.string.substr(i, j-1)) / 2;
+        for (j = i; string.charAt(j) != ' '; j++);
+        vertex[1] = parseFloat(string.substr(i, j-1)) / 2;
         
         // Leitura da coordenada z
         i = j + 1;
-        for (j = i; obj.string.charAt(j) != '\n'; j++);
-        vertex[2] = parseFloat(obj.string.substr(i, j-1)) / 2;
+        for (j = i; string.charAt(j) != '\n'; j++);
+        vertex[2] = parseFloat(string.substr(i, j-1)) / 2;
         
         i = j + 1;      // Vai para a próxima linha
         
@@ -241,10 +248,10 @@ function readVertices(obj) {
 
 // Lê as faces, ou seja, os grupos de vértices correspondentes
 // a faces e coloca esses grupos em um novo vetor
-function readFaces(obj) {
+function readFaces(string) {
     // Pula todas as linhas "vn ", que não vai ser usadas por enquanto
-    while (obj.string.charAt(i) == 'v') {
-        while (obj.string.charAt(i) != '\n') i++;
+    while (string.charAt(i) == 'v') {
+        while (string.charAt(i) != '\n') i++;
         i++;
     }
     
@@ -253,35 +260,35 @@ function readFaces(obj) {
      usemtl wire_255255255
      s off
      */
-    while (obj.string.charAt(i) != '\n') i++;
+    while (string.charAt(i) != '\n') i++;
     i++;
-    while (obj.string.charAt(i) != '\n') i++;
+    while (string.charAt(i) != '\n') i++;
     i++;
     
     // Para cada face
-    while (obj.string.charAt(i) == 'f') {
+    while (string.charAt(i) == 'f') {
         i += 2;                 // Pula o "f "
         var j;                  // Vai para o fim de cada número
         
         var number = [];        // Triângulo a ser adicionado (índice dos 3 vértices na lista)
         
         // Primeiro vértice
-        for (j = i; obj.string.charAt(j) != '/'; j++);          // Lê até a primeira '/'
-        number[0] = parseInt(obj.string.substr(i, j-1)) - 1;    // Adiciona o número
-        for (i = j; obj.string.charAt(i) != ' '; i++);          // Pula o resto, que por
+        for (j = i; string.charAt(j) != '/'; j++);          // Lê até a primeira '/'
+        number[0] = parseInt(string.substr(i, j-1)) - 1;    // Adiciona o número
+        for (i = j; string.charAt(i) != ' '; i++);          // Pula o resto, que por
                                                                   // enquanto não vamos usar
         i++;
         
         // Segundo vértice
-        for (j = i; obj.string.charAt(j) != '/'; j++);
-        number[1] = parseInt(obj.string.substr(i, j-1)) - 1;
-        for (i = j; obj.string.charAt(i) != ' '; i++);
+        for (j = i; string.charAt(j) != '/'; j++);
+        number[1] = parseInt(string.substr(i, j-1)) - 1;
+        for (i = j; string.charAt(i) != ' '; i++);
         i++;
         
         // Terceiro vértice
-        for (j = i; obj.string.charAt(j) != '/'; j++);
-        number[2] = parseInt(obj.string.substr(i, j-1)) - 1;
-        for (i = j; obj.string.charAt(i) != '\n'; i++);
+        for (j = i; string.charAt(j) != '/'; j++);
+        number[2] = parseInt(string.substr(i, j-1)) - 1;
+        for (i = j; string.charAt(i) != '\n'; i++);
         i++;
         
         // Adiciona os vértices, em ordem, ao vetor de "pontos"
@@ -299,16 +306,65 @@ function readFaces(obj) {
     
     // Configura a peça para saber onde é
     // o começo e o final dos seus vértices na lista
-    obj.vertexStart = previousPointsSize;
+    var vertexStart = previousPointsSize;
     previousPointsSize = points.length;
-    obj.vertexEnd = points.length;
+    var vertexEnd = points.length;
     
     verticesStart = vertices.length;
+    
+    return vec2(vertexStart, vertexEnd);
 }
 
 
+/* Cria um novo objeto de acordo com os parâmetros passados */
+
+function newObject( vertexRange, position, size, theta, phi, psi ) {
+    
+    if (! position) position = vec4(0.0, 0.0, 0.0, 1.0);
+    if (! size    )     size = 1.0;
+    if (! theta   )    theta = 0.0;
+    if (! phi     )      phi = 0.0;
+    if (! psi     )      psi = 0.0;
+    
+
+    
+    var obj = ({
+               vertexStart: vertexRange[0],
+               vertexEnd: vertexRange[1],
+               
+               //==============================================
+               
+               position: position,
+               translationMatrix: translate(position),
+               
+               rotationMatrix: rotateInXYZ(theta, phi, psi),
+               
+               scaleMatrix: scale(size),
+               
+               modelViewMatrix: null,
+               
+               updateModelViewMatrix: updateModelViewMatrix,
+               hasToUpdateMatrix: true,
+               
+               //==============================================
+               
+               translate: translateInc,
+               rotate: rotateInXYZInc,
+               scale: scaleInc,
+               deform: deformInc,
+               });
+    
+    return obj;
+}
 
 
+// Multiplica as matrizes de um objeto (se necessário) para obter a matriz final de model view
+function updateModelViewMatrix() {
+    if (this.hasToUpdateMatrix) {
+        this.modelViewMatrix = times3(this.translationMatrix, this.rotationMatrix, this.scaleMatrix);
+        this.hasToUpdateMatrix = false;
+    }
+}
 
 
 
@@ -500,8 +556,11 @@ function render() {
     for (i = 0; i < objects.length; i++) {
         var obj = objects[i];
         
+        // Atualiza as informações do objeto
+        obj.updateModelViewMatrix();
+        
         // Manda para o shader a matriz a ser aplicada (projeção x view x model)
-        gl.uniformMatrix4fv(matrixLoc, false, flatten(times(projec, times(lookat, obj.objectWorldMatrix))));
+        gl.uniformMatrix4fv(matrixLoc, false, flatten(times(projec, times(lookat, obj.modelViewMatrix))));
         
         // Desenha o objeto atual
         gl.drawArrays( gl.TRIANGLES, 0, points.length);
