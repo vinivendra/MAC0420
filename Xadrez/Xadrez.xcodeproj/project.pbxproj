@@ -11,7 +11,7 @@
 			isa = PBXAggregateTarget;
 			buildConfigurationList = 24291F2F18F1C28B00C1C5D1 /* Build configuration list for PBXAggregateTarget "Safari" */;
 			buildPhases = (
-				24291F3218F1C29400C1C5D1 /* ShellScript */,
+				24291F3218F1C29400C1C5D1 /* Run Script */,
 			);
 			dependencies = (
 			);
@@ -352,18 +352,19 @@
 /* End PBXProject section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		24291F3218F1C29400C1C5D1 /* ShellScript */ = {
+		24291F3218F1C29400C1C5D1 /* Run Script */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			inputPaths = (
 			);
+			name = "Run Script";
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "open ~/Dropbox/Development/MAC0420/Main/index.html";
+			shellScript = "open ~/Dropbox/Development/MAC0420/Xadrez/Main/index.html";
 		};
 /* End PBXShellScriptBuildPhase section */
 
