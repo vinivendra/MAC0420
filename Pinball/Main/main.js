@@ -35,8 +35,9 @@ var previousPointsSize = 0;
 
 
 
-
-
+// ===================================================================================================
+/* Tabuleiro */
+var boardNormal = vec4(0.0, 0.0, 1.0, 0.0);
 
 
 
@@ -102,7 +103,7 @@ function finishInit() {
 
     readVertices(objStrings[0]);
     var ballVertexRange = readFaces(objStrings[0]);
-    var ball = newObject(ballVertexRange, vec4(0.0, 0.0, 0.0, 1.0), 0.1);
+    var ball = newObjectBall(ballVertexRange, vec4(0.0, 0.0, 0.0, 1.0), 0.1);
     
     objects.push(ball);
     
@@ -156,7 +157,7 @@ function finishInit() {
     
     
     // Inicializa a matriz lookat na posição inicial desejada (arbitrária)
-    eye = vec3(1.0, 0.0, 0.0);
+    eye = vec3(0.0, 0.0, 1.0);
     at = vec3(0.0, 0.0, 0.0);
     up = vec3(0.0, 1.0, 0.0);
     lookat = lookAt(eye, at, up);
@@ -329,6 +330,60 @@ function newObject( vertexRange, position, size, theta, phi, psi ) {
 
     
     var obj = ({
+               // Intervalo correspondente aos vértices do objeto
+               vertexStart: vertexRange[0],
+               vertexEnd: vertexRange[1],
+               
+               //==============================================
+               
+               // Posição do objeto no mundo e sua matriz de translação
+               position: position,
+               translationMatrix: translate(position),
+               
+               // Matriz de rotação
+               rotationMatrix: rotateInXYZ(theta, phi, psi),
+               
+               // Matriz de escala
+               scaleMatrix: scale(size),
+               
+               // Matriz produto das três anteriores
+               modelViewMatrix: null,
+               
+               // Método de atualização da modelViewMatrix e flag para
+               //  evitar de aualizá-la desnecessariamente
+               updateModelViewMatrix: updateModelViewMatrix,
+               hasToUpdateMatrix: true,
+               
+               //==============================================
+               
+               // Métodos de transformação geométrica dos objetos
+               translate: translateInc,
+               rotate: rotateInXYZInc,
+               scale: scaleInc,
+               deform: deformInc,
+               
+               });
+    
+    return obj;
+}
+
+
+
+
+/* Cria uma nova bola */
+function newObjectBall ( vertexRange, position, size, theta, phi, psi ) {
+    
+    if (! position) position = vec4(0.0, 0.0, 0.0, 1.0);
+    if (! size    )     size = 1.0;
+    if (! theta   )    theta = 0.0;
+    if (! phi     )      phi = 0.0;
+    if (! psi     )      psi = 0.0;
+    
+    
+    
+    var obj = ({
+               // O começo é idêntico ao método de contrução
+               //  de objetos genéricos acima
                vertexStart: vertexRange[0],
                vertexEnd: vertexRange[1],
                
@@ -348,14 +403,184 @@ function newObject( vertexRange, position, size, theta, phi, psi ) {
                
                //==============================================
                
-               translate: translateInc,
-               rotate: rotateInXYZInc,
-               scale: scaleInc,
-               deform: deformInc,
+               translate: translateObj,
+               rotate: rotateObj,
+               scale: scaleObj,
+               deform: deformObj,
+               
+               //==============================================
+               
+               // Variáveis e métodos da física da bola
+               
+               // Tempo desde a última atualização
+               time: (new Date()).getTime(),
+               // Massa sa bola
+               mass: 1.0,
+               // Velocidade atual instantânea
+               velocity: vec4(-0.001, 0.0, 0.0, 0.0),
+               // Acumulador de forças
+               forces: gravity(),
+               // Aplica as forças, move a bola e reseta o acumulador
+               applyForces: applyForces,
+               
                });
     
     return obj;
 }
+
+
+
+/* Funções de transformação geométrica dos objetos */
+
+// Translação
+function translateObj(vector) {
+    // Atualiza a posição
+    this.position = plus(this.position, vector);
+    
+    this.hasToUpdateMatrix = true;
+    
+    // Atualiza a matriz de translação
+    this.translationMatrix = translateInc(vector, this.translationMatrix);
+}
+
+// Rotação
+function rotateObj(theta, phi, psi) {
+    this.hasToUpdateMatrix = true;
+    
+    this.rotationMatrix = rotateInXYZInc(theta, phi, psi, this.rotationMatrix);
+}
+
+// Escala
+function scaleObj(a) {
+    this.hasToUpdateMatrix = true;
+    
+    this.scaleMatrix = scaleInc(a, this.scaleMatrix);
+}
+
+// Deformação
+function deformObj(v) {
+    this.hasToUpdateMatrix = true;
+    
+    this.scaleMatrix = deformInc(v, this.scaleMatrix);
+}
+
+
+
+// Aplica as forças acumuladas a um objeto
+function applyForces () {
+    // Pega a aceleração
+    var accel = mult(1.0/this.mass, this.forces);           // F = ma -> a = F/m
+    
+    // Zera o acumulador de forças
+    this.forces = gravity();
+    
+    // Acha o intervalo de tempo
+    var time = (new Date()).getTime() - this.time;
+    this.time += time;
+    time /= 1000;
+    
+    // Calcula a nova velocidade
+    this.velocity = plus(this.velocity, mult(time, accel)); // v = v_0 + at
+    
+    // Se não estamos parados
+    if (normS(this.velocity) != 0) {
+        
+        // Calcula o limite de deslocamento
+        var limit = limitForMovement(this);         // "O quanto a bola pode andar"
+        var normalVector = limit[1];
+        var energyCoefficient = limit[2];
+        limit = limit[0];
+        
+        var proj = projection(this.velocity, normalizev(limit));
+        
+        var d = vdot(normalVector, this.velocity);
+        
+        
+        // Se a bola não está "parada" em cima do obstáculo
+        if (!((normS(limit) == 0) && (d < 0))) {
+            
+            var c = vdot(limit, proj);
+            
+            // Se vamos bater
+            if (normS(limit) < normS(proj) && c > 0) {
+                
+                var p = projection(this.velocity, mult(-1, normalizev(limit)));
+                
+                var v1 = normalizev(this.velocity);
+                
+                var sizeV1 = normS(this.velocity)*normS(limit)/normS(proj);
+                sizeV1 = Math.sqrt(sizeV1);
+                v1 = mult(sizeV1, v1);
+                
+                
+                
+                var v2 = minus(this.velocity, mult(2, p));
+                v2 = normalizev(v2);
+                var reflection = v2;
+                var sizeV2 = norm(this.velocity) - sizeV1;
+                v2 = mult(sizeV2, v2);
+
+                
+                this.translate(v1);
+                this.translate(v2);
+                
+                reflection = mult(norm(this.velocity), reflection);
+                var refProj = projection(reflection, normalVector);
+                
+                reflection = plus(reflection, mult(energyCoefficient, refProj));
+                this.velocity = reflection;
+                
+                
+//                this.velocity = vec4(this.velocity[0], this.velocity[1] * -0.6, this.velocity[2], this.velocity[3]);
+                
+            }
+            else {
+                // Senão
+                // Caso normal: anda de acordo com a velocidade
+                this.translate(this.velocity);
+            }
+        }
+        // Se ela está parada em cima do obstáculo, desliza
+        else {
+            var slide = vcross(normalVector, boardNormal);
+            
+            if (slide[1] < 0) slide = mult(-1, slide);
+            
+            proj = projection(this.velocity, slide);
+            
+            this.translate(proj);
+        }
+        
+    }
+    else {
+        console.log("Parei");
+    }
+    
+    // SET THE BALL'S ROTATION HERE
+}
+
+
+
+
+// Retorna o deslocamento máximo que a bola pode ter com relação a uma superfície
+function limitForMovement(ball) {
+    var limit = minus(vec4(ball.position[0], -0.5, ball.position[2], 0.0), ball.position);
+    
+    var n = vec4(0.0, 1.0, 0.0, 0.0);
+    
+    var ret = [limit, n, -0.1];
+    
+    return ret;
+}
+
+
+// Retorna a "força da gravidade", ajustada
+//  de acordo com a inclinação da mesa
+function gravity() {
+    return vec4(0.0, -0.03, 0.0, 0.0);
+}
+
+
 
 
 // Multiplica as matrizes de um objeto (se necessário) para obter a matriz final de model view
@@ -381,10 +606,13 @@ function updateModelViewMatrix() {
 
 
 
+
 /* MATRIZES DE PROJEÇÃO */
 // Cria e seta a matriz de perspectiva
 function updatePerspective() {
-    projec = perspective(60, canvas.width/canvas.height, 2.0, 0.0001);
+//    projec = perspective(60, canvas.width/canvas.height, 2.0, 0.0001);
+    var orthoZoom = 0.5;
+    projec = ortho(orthoZoom  * -canvas.width/canvas.height, orthoZoom  * canvas.width/canvas.height, orthoZoom  * -1, orthoZoom  * 1, orthoZoom  * -4.1, orthoZoom  * -0.1);
 }
 
 
@@ -552,6 +780,13 @@ function render() {
     // Limpa a tela
     gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+    
+    // Para cada bola
+    for (i = 0; i < objects.length; i++) {
+        objects[i].applyForces();
+//        console.log(objects[i].forces, objects[i].position, objects[i].velocity);
+    }
+    
     
     for (i = 0; i < objects.length; i++) {
         var obj = objects[i];

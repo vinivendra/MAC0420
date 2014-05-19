@@ -32,6 +32,10 @@ function times4(a, b, c, d, e) {
 function norm(p) {
     return Math.sqrt(p[0]*p[0] + p[1]*p[1] + p[2]*p[2]);
 }
+// Squared
+function normS(p) {
+    return p[0]*p[0] + p[1]*p[1] + p[2]*p[2];
+}
 // 3D
 function norm3(p) {
     return Math.sqrt(p[0]*p[0] + p[1]*p[1] + p[2]*p[2]);
@@ -39,6 +43,12 @@ function norm3(p) {
 // 2D
 function norm2(p) {
     return Math.sqrt(p[0]*p[0] + p[1]*p[1]);
+}
+// Normalization
+function normalizev(p) {
+    var n = norm(p);
+    if (n == 0) return zeroVector();
+    return vec4(p[0]/n, p[1]/n, p[2]/n, 0.0);
 }
 
 // Produto vetorial 3D
@@ -62,17 +72,46 @@ function degrees (a) {
 // Ângulo entre dois vetores 3D
 // arccos(p.q/(|p|*|q|))
 function angle(p, q) {
-    var a = norm3(p);
-    var b = norm3(q);
+    var a = norm(p);
+    var b = norm(q);
     var c = vdot(p, q);
     
     return Math.acos(c/(a*b));
 }
 
+// Cosseno do ângulo entre dois vetores
+// arccos(p.q/(|p|*|q|))
+function cosAngle(p, q) {
+    var a = norm(p);
+    var b = norm(q);
+    
+    if (a || b) {       // Se estiver tudo certo
+        var c = vdot(p, q);
+        return c/(a*b);
+    }
+    else {              // Se um dos dois for 0
+        return 0;
+    }
+}
+
+// Projeção de um vetor v na direção de um vetor u
+// p = <v, u> x (u/|u|)
+function projection(v, u) {
+    
+    var w = normalizev(u);
+
+    var d = vdot(v, w);
+    
+    return mult(d, w);
+}
+
+
+
+
 // "Projeção" de um ponto (x,y) para um (x,y,z) na esfera unitária
 // (Mousepad para Trackball)
 function getZ(p) {
-    return Math.sqrt(1 - norm2(p));
+    return Math.sqrt(1 - 2(p));
 }
 
 
@@ -167,7 +206,7 @@ function minus(a, b) {
 }
 
 function mult(a, v) {
-    return vec4(a * v[0], a * v[1], a * v[2], a[3]);
+    return vec4(a * v[0], a * v[1], a * v[2], v[3]);
 }
 
 
@@ -187,7 +226,13 @@ function pointize (a) {
     return vec4(a[0], a[1], a[2], 1.0);
 }
 
+function zeroVector () {
+    return vec4(0.0, 0.0, 0.0, 0.0);
+}
 
+function zeroPoint () {
+    return vec4(0.0, 0.0, 0.0, 1.0);
+}
 
 
 
