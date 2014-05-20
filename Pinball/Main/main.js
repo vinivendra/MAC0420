@@ -35,6 +35,14 @@ var previousPointsSize = 0;
 
 
 
+
+// ===================================================================================================
+/* Hitboxes */
+var hitboxes = [];
+
+
+
+
 // ===================================================================================================
 /* Tabuleiro */
 var boardNormal = vec4(0.0, 0.0, 1.0, 0.0);
@@ -109,6 +117,20 @@ function finishInit() {
     
 
 
+    var hitbox = [vec4(-1.0, -0.5, -1.0, 1.0),      // Retângulo
+                  vec4( 1.0, -0.6, -1.0, 1.0),
+                  vec4( 1.0, -0.6,  1.0, 1.0),
+                  vec4(-1.0, -0.5,  1.0, 1.0),
+                  
+                  vec4( 0.0,  1.0,  0.0, 0.0),      // Normal (unitária)
+                  
+                  -0.1 ];                           // Aumento de energia
+    
+    hitbox[4] = vcross(minus(hitbox[1], hitbox[0]), minus(hitbox[3], hitbox[0]));
+    hitbox[4] = normalizev(hitbox[4]);
+    
+    hitboxes.push(hitbox);
+    
     
     
     /* Configuração do WebGL */
@@ -417,7 +439,7 @@ function newObjectBall ( vertexRange, position, size, theta, phi, psi ) {
                // Massa sa bola
                mass: 1.0,
                // Velocidade atual instantânea
-               velocity: vec4(-0.001, 0.0, 0.0, 0.0),
+               velocity: vec4(-0.0, 0.0, 0.0, 0.0),
                // Acumulador de forças
                forces: gravity(),
                // Aplica as forças, move a bola e reseta o acumulador
@@ -487,7 +509,56 @@ function applyForces () {
         
         // Calcula o limite de deslocamento
         var limit = limitForMovement(this);         // "O quanto a bola pode andar"
-        var normalVector = limit[1];
+        
+        if (limit == null) {
+                this.translate(this.velocity);
+        }
+        else {
+            var normalVector = limit[1];
+            var energyCoefficient = limit[2];
+            limit = limit[0];
+            
+            if (normS(limit) == 0) {
+                var slide = vcross(normalVector, boardNormal);
+                
+                if (slide[1] < 0) slide = mult(-1, slide);
+                
+                var proj = projection(this.velocity, slide);
+                
+                this.translate(proj);
+            }
+            else {
+                var proj = projection(this.velocity, normalizev(limit));
+                
+                var p = projection(this.velocity, mult(-1, normalizev(limit)));
+                
+                var v1 = normalizev(this.velocity);
+                
+                var sizeV1 = normS(this.velocity)*normS(limit)/normS(proj);
+                sizeV1 = Math.sqrt(sizeV1);
+                v1 = mult(sizeV1, v1);
+                
+                
+                
+                var v2 = minus(this.velocity, mult(2, p));
+                v2 = normalizev(v2);
+                var reflection = v2;
+                var sizeV2 = norm(this.velocity) - sizeV1;
+                v2 = mult(sizeV2, v2);
+                
+                
+                this.translate(v1);
+                this.translate(v2);
+                
+                reflection = mult(norm(this.velocity), reflection);
+                var refProj = projection(reflection, normalVector);
+                
+                reflection = plus(reflection, mult(energyCoefficient, refProj));
+                this.velocity = reflection;
+            }
+        }
+        
+        /*var normalVector = limit[1];
         var energyCoefficient = limit[2];
         limit = limit[0];
         
@@ -549,14 +620,14 @@ function applyForces () {
             proj = projection(this.velocity, slide);
             
             this.translate(proj);
-        }
+        }*/
         
     }
     else {
         console.log("Parei");
     }
     
-    // SET THE BALL'S ROTATION HERE
+    // SET THE BALL'S ROTATION HERE... HEEEEEEREEEE
 }
 
 
@@ -564,7 +635,67 @@ function applyForces () {
 
 // Retorna o deslocamento máximo que a bola pode ter com relação a uma superfície
 function limitForMovement(ball) {
-    var limit = minus(vec4(ball.position[0], -0.5, ball.position[2], 0.0), ball.position);
+    var limit;
+    
+    
+    
+    var hitbox = hitboxes[0];
+    
+    var hitboxRectangle = [hitbox[0], hitbox[1], hitbox[2], hitbox[3]];
+    var hitboxNormal = hitbox[4];
+    var hitboxEnergy = hitbox[5];
+    
+    var v1 = minus(ball.position, hitboxRectangle[0]);
+    var dot1;
+    // Se estamos do lado certo da hitbox
+    if ((dot1 = vdot(v1, hitboxNormal)) > 0) {
+        var v2 = plus(ball.position, ball.velocity);
+        v2 = minus(v2, hitboxRectangle[0]);
+        
+        var dot2;
+        
+        // Se vamos passar do plano que contém a hitbox
+        if ((dot2 = vdot(v2, hitboxNormal)) < 0) {
+            
+            var p1 = projection(v1, hitboxNormal);
+            var p2 = projection(v2, hitboxNormal);
+            
+            var n1 = norm(p1);
+            var n2 = norm(p2);
+            
+            n1 = n1/(n1+n2);
+            
+            var intersectionPoint = plus(ball.position, mult(n1, ball.velocity));
+            
+            var i1 = minus(intersectionPoint, hitboxRectangle[0]);
+            
+            // Se estamos do lado certo do primeiro ponto
+            var d1 = minus(hitboxRectangle[1], hitboxRectangle[0]);
+            if (vdot(d1, i1) > 0) {
+                var d2 = minus(hitboxRectangle[3], hitboxRectangle[0]);
+                if (vdot (d2, i1) > 0)  {
+                    // Se estamos do lado certo do terceiro ponto
+                    var d3 = minus(hitboxRectangle[1], hitboxRectangle[2]);
+                    if (vdot(d3, i1) < 0) {
+                        var d4 = minus(hitboxRectangle[3], hitboxRectangle[2]);
+                        if (vdot (d4, i1) < 0)  {
+                            limit = projection(v1, hitboxNormal);
+                            limit = mult(-1.0, limit);
+                        }
+                    }
+                    
+                }
+            }
+            
+            
+            
+        }
+    }
+    
+    
+    if (typeof limit === "undefined") {
+        return null;
+    }
     
     var n = vec4(0.0, 1.0, 0.0, 0.0);
     

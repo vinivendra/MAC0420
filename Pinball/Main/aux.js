@@ -105,6 +105,13 @@ function projection(v, u) {
     return mult(d, w);
 }
 
+// Idem, mas assume que u já está normalizado
+function easyProjection(v, u) {
+    
+    var d = vdot(v, u);
+    
+    return mult(d, u);
+}
 
 
 
