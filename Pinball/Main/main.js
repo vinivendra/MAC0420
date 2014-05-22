@@ -516,7 +516,7 @@ function applyForces () {
     this.time += time;
     time /= 1000;
     
-    // Calcula a nova velocidade
+    // Calcula a nova velocidadew
     this.velocity = plus(this.velocity, mult(time, accel)); // v = v_0 + at
     
     // Se não estamos parados
