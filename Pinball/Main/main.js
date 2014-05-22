@@ -124,12 +124,27 @@ function finishInit() {
                   
                   vec4( 0.0,  1.0,  0.0, 0.0),      // Normal (unitária)
                   
-                  -0.1 ];                           // Aumento de energia
+                  0.0 ];                           // Aumento de energia
     
     hitbox[4] = vcross(minus(hitbox[1], hitbox[0]), minus(hitbox[3], hitbox[0]));
     hitbox[4] = normalizev(hitbox[4]);
     
     hitboxes.push(hitbox);
+    
+    
+    var hitbox2 = [vec4(-1.0, -0.4, -1.0, 1.0),      // Retângulo
+                   vec4( 1.0, -0.3, -1.0, 1.0),
+                   vec4( 1.0, -0.3,  1.0, 1.0),
+                   vec4(-1.0, -0.4,  1.0, 1.0),
+                   
+                   vec4( 0.0,  1.0,  0.0, 0.0),      // Normal (unitária)
+
+                  0.0 ];                           // Aumento de energia
+
+    hitbox2[4] = vcross(minus(hitbox2[1], hitbox2[0]), minus(hitbox2[3], hitbox2[0]));
+    hitbox2[4] = normalizev(hitbox2[4]);
+    
+    hitboxes.push(hitbox2);
     
     
     
@@ -558,69 +573,7 @@ function applyForces () {
             }
         }
         
-        /*var normalVector = limit[1];
-        var energyCoefficient = limit[2];
-        limit = limit[0];
-        
-        var proj = projection(this.velocity, normalizev(limit));
-        
-        var d = vdot(normalVector, this.velocity);
-        
-        
-        // Se a bola não está "parada" em cima do obstáculo
-        if (!((normS(limit) == 0) && (d < 0))) {
-            
-            var c = vdot(limit, proj);
-            
-            // Se vamos bater
-            if (normS(limit) < normS(proj) && c > 0) {
-                
-                var p = projection(this.velocity, mult(-1, normalizev(limit)));
-                
-                var v1 = normalizev(this.velocity);
-                
-                var sizeV1 = normS(this.velocity)*normS(limit)/normS(proj);
-                sizeV1 = Math.sqrt(sizeV1);
-                v1 = mult(sizeV1, v1);
-                
-                
-                
-                var v2 = minus(this.velocity, mult(2, p));
-                v2 = normalizev(v2);
-                var reflection = v2;
-                var sizeV2 = norm(this.velocity) - sizeV1;
-                v2 = mult(sizeV2, v2);
 
-                
-                this.translate(v1);
-                this.translate(v2);
-                
-                reflection = mult(norm(this.velocity), reflection);
-                var refProj = projection(reflection, normalVector);
-                
-                reflection = plus(reflection, mult(energyCoefficient, refProj));
-                this.velocity = reflection;
-                
-                
-//                this.velocity = vec4(this.velocity[0], this.velocity[1] * -0.6, this.velocity[2], this.velocity[3]);
-                
-            }
-            else {
-                // Senão
-                // Caso normal: anda de acordo com a velocidade
-                this.translate(this.velocity);
-            }
-        }
-        // Se ela está parada em cima do obstáculo, desliza
-        else {
-            var slide = vcross(normalVector, boardNormal);
-            
-            if (slide[1] < 0) slide = mult(-1, slide);
-            
-            proj = projection(this.velocity, slide);
-            
-            this.translate(proj);
-        }*/
         
     }
     else {
@@ -637,69 +590,101 @@ function applyForces () {
 function limitForMovement(ball) {
     var limit;
     
+    var velocityNormS = normS(ball.velocity);
     
+    var possibles = [];
     
-    var hitbox = hitboxes[0];
+    var hits = [];
     
-    var hitboxRectangle = [hitbox[0], hitbox[1], hitbox[2], hitbox[3]];
-    var hitboxNormal = hitbox[4];
-    var hitboxEnergy = hitbox[5];
-    
-    var v1 = minus(ball.position, hitboxRectangle[0]);
-    var dot1;
-    // Se estamos do lado certo da hitbox
-    if ((dot1 = vdot(v1, hitboxNormal)) > 0) {
-        var v2 = plus(ball.position, ball.velocity);
-        v2 = minus(v2, hitboxRectangle[0]);
+    for (var i = 0; i < hitboxes.length; i++) {
+        var hitbox = hitboxes[i];
+        var hitboxNormal = hitbox[4];
         
-        var dot2;
+        var v1 = minus(ball.position, hitbox[0]);
+        var limit = projection(v1, hitboxNormal);
         
-        // Se vamos passar do plano que contém a hitbox
-        if ((dot2 = vdot(v2, hitboxNormal)) < 0) {
-            
-            var p1 = projection(v1, hitboxNormal);
-            var p2 = projection(v2, hitboxNormal);
-            
-            var n1 = norm(p1);
-            var n2 = norm(p2);
-            
-            n1 = n1/(n1+n2);
-            
-            var intersectionPoint = plus(ball.position, mult(n1, ball.velocity));
-            
-            var i1 = minus(intersectionPoint, hitboxRectangle[0]);
-            
-            // Se estamos do lado certo do primeiro ponto
-            var d1 = minus(hitboxRectangle[1], hitboxRectangle[0]);
-            if (vdot(d1, i1) > 0) {
-                var d2 = minus(hitboxRectangle[3], hitboxRectangle[0]);
-                if (vdot (d2, i1) > 0)  {
-                    // Se estamos do lado certo do terceiro ponto
-                    var d3 = minus(hitboxRectangle[1], hitboxRectangle[2]);
-                    if (vdot(d3, i1) < 0) {
-                        var d4 = minus(hitboxRectangle[3], hitboxRectangle[2]);
-                        if (vdot (d4, i1) < 0)  {
-                            limit = projection(v1, hitboxNormal);
-                            limit = mult(-1.0, limit);
-                        }
-                    }
-                    
-                }
-            }
-            
-            
-            
+        if (normS(limit) < velocityNormS) {
+            possibles.push(i);
         }
     }
     
     
-    if (typeof limit === "undefined") {
+    
+    for (var i = 0; i < possibles.length; i++) {
+        var hitbox = hitboxes[possibles[i]];
+        
+        var hitboxRectangle = [hitbox[0], hitbox[1], hitbox[2], hitbox[3]];
+        var hitboxNormal = hitbox[4];
+        var hitboxEnergy = hitbox[5];
+        
+        var v1 = minus(ball.position, hitboxRectangle[0]);
+        var dot1;
+        // Se estamos do lado certo da hitbox
+        if ((dot1 = vdot(v1, hitboxNormal)) > 0) {
+            var v2 = plus(ball.position, ball.velocity);
+            v2 = minus(v2, hitboxRectangle[0]);
+            
+            var dot2;
+            
+            // Se vamos passar do plano que contém a hitbox
+            if ((dot2 = vdot(v2, hitboxNormal)) < 0) {
+                
+                var p1 = projection(v1, hitboxNormal);
+                var p2 = projection(v2, hitboxNormal);
+                
+                var n1 = norm(p1);
+                var n2 = norm(p2);
+                
+                n1 = n1/(n1+n2);
+                
+                var intersectionPoint = plus(ball.position, mult(n1, ball.velocity));
+                
+                var i1 = minus(intersectionPoint, hitboxRectangle[0]);
+                
+                // Se estamos do lado certo do primeiro ponto
+                var d1 = minus(hitboxRectangle[1], hitboxRectangle[0]);
+                if (vdot(d1, i1) > 0) {
+                    var d2 = minus(hitboxRectangle[3], hitboxRectangle[0]);
+                    if (vdot (d2, i1) > 0)  {
+                        // Se estamos do lado certo do terceiro ponto
+                        var d3 = minus(hitboxRectangle[1], hitboxRectangle[2]);
+                        if (vdot(d3, i1) < 0) {
+                            var d4 = minus(hitboxRectangle[3], hitboxRectangle[2]);
+                            if (vdot (d4, i1) < 0)  {
+                                limit = projection(v1, hitboxNormal);
+                                limit = mult(-1.0, limit);
+                                hits.push([possibles[i], limit]);
+                            }
+                        }
+                        
+                    }
+                }
+                
+                
+                
+            }
+        }
+    }
+
+    
+    if (hits.length == 0) {
         return null;
+    }
+    else {
+        var min = 0;
+        var n = normS(hits[min][1]);
+        
+        for (var i = 1; i < hits.length; i++) {
+            if (normS(hits[i][1]) < n) {
+                min = i;
+                n = normS(hits[i][1]);
+            }
+        }
     }
     
     var n = vec4(0.0, 1.0, 0.0, 0.0);
     
-    var ret = [limit, n, -0.1];
+    var ret = [hits[min][1], hitboxes[hits[min][0]][4], hitboxes[hits[min][0]][5]];
     
     return ret;
 }
