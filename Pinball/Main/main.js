@@ -108,15 +108,15 @@ function finishInit() {
     document.onkeyup = handleKeyUp;
     
     
-
+    
     readVertices(objStrings[0]);
     var ballVertexRange = readFaces(objStrings[0]);
     var ball = newObjectBall(ballVertexRange, vec4(0.0, 0.0, 0.0, 1.0), 0.1);
     
     objects.push(ball);
     
-
-
+    
+    
     var hitbox = [vec4(-1.0, -0.5, -1.0, 1.0),      // Retângulo
                   vec4( 1.0, -0.6, -1.0, 1.0),
                   vec4( 1.0, -0.6,  1.0, 1.0),
@@ -124,7 +124,7 @@ function finishInit() {
                   
                   vec4( 0.0,  1.0,  0.0, 0.0),      // Normal (unitária)
                   
-                  0.0 ];                           // Aumento de energia
+                  -0.2 ];                           // Aumento de energia
     
     hitbox[4] = vcross(minus(hitbox[1], hitbox[0]), minus(hitbox[3], hitbox[0]));
     hitbox[4] = normalizev(hitbox[4]);
@@ -138,9 +138,9 @@ function finishInit() {
                    vec4(-1.0, -0.4,  1.0, 1.0),
                    
                    vec4( 0.0,  1.0,  0.0, 0.0),      // Normal (unitária)
-
-                  0.0 ];                           // Aumento de energia
-
+                   
+                   -0.2 ];                           // Aumento de energia
+    
     hitbox2[4] = vcross(minus(hitbox2[1], hitbox2[0]), minus(hitbox2[3], hitbox2[0]));
     hitbox2[4] = normalizev(hitbox2[4]);
     
@@ -314,7 +314,7 @@ function readFaces(string) {
         for (j = i; string.charAt(j) != '/'; j++);          // Lê até a primeira '/'
         number[0] = parseInt(string.substr(i, j-1)) - 1;    // Adiciona o número
         for (i = j; string.charAt(i) != ' '; i++);          // Pula o resto, que por
-                                                                  // enquanto não vamos usar
+                                                            // enquanto não vamos usar
         i++;
         
         // Segundo vértice
@@ -364,7 +364,7 @@ function newObject( vertexRange, position, size, theta, phi, psi ) {
     if (! phi     )      phi = 0.0;
     if (! psi     )      psi = 0.0;
     
-
+    
     
     var obj = ({
                // Intervalo correspondente aos vértices do objeto
@@ -525,55 +525,58 @@ function applyForces () {
         // Calcula o limite de deslocamento
         var limit = limitForMovement(this);         // "O quanto a bola pode andar"
         
+        
+        // Se não vai bater em ninguem, é só andar
         if (limit == null) {
-                this.translate(this.velocity);
+            this.translate(this.velocity);
         }
+        
+        // Se vai bater em alguém, tratamos a colisão
         else {
+            // Pega as informações da colisão
             var normalVector = limit[1];
             var energyCoefficient = limit[2];
             limit = limit[0];
             
-            if (normS(limit) == 0) {
-                var slide = vcross(normalVector, boardNormal);
-                
-                if (slide[1] < 0) slide = mult(-1, slide);
-                
-                var proj = projection(this.velocity, slide);
-                
-                this.translate(proj);
+            
+            // Calcula o deslocamento
+            var proj = projection(this.velocity, normalizev(limit));
+            
+            var v1 = normalizev(this.velocity);
+            
+            var sizeV1 = normS(this.velocity)*normS(limit)/normS(proj);
+            sizeV1 = Math.sqrt(sizeV1);
+            v1 = mult(0.99 * sizeV1, v1);
+            
+            
+            
+            // Anda até o obstáculo
+            this.translate(v1);
+            
+            
+            
+            // Calcula a direção de reflexão
+            var p = projection(this.velocity, mult(-1, normalizev(limit)));
+            
+            var reflection = minus(this.velocity, mult(2, p));
+            reflection = normalizev(reflection);
+            
+            
+            // Calcula a velocidade nova
+            reflection = mult(norm(this.velocity), reflection);
+            var refProj = projection(reflection, normalVector);
+            
+            if (normS(this.velocity) <= 0.00001) {
+                energyCoefficient = 0.0015;
+                refProj = normalizev(refProj);
             }
-            else {
-                var proj = projection(this.velocity, normalizev(limit));
-                
-                var p = projection(this.velocity, mult(-1, normalizev(limit)));
-                
-                var v1 = normalizev(this.velocity);
-                
-                var sizeV1 = normS(this.velocity)*normS(limit)/normS(proj);
-                sizeV1 = Math.sqrt(sizeV1);
-                v1 = mult(sizeV1, v1);
-                
-                
-                
-                var v2 = minus(this.velocity, mult(2, p));
-                v2 = normalizev(v2);
-                var reflection = v2;
-                var sizeV2 = norm(this.velocity) - sizeV1;
-                v2 = mult(sizeV2, v2);
-                
-                
-                this.translate(v1);
-                this.translate(v2);
-                
-                reflection = mult(norm(this.velocity), reflection);
-                var refProj = projection(reflection, normalVector);
-                
-                reflection = plus(reflection, mult(energyCoefficient, refProj));
-                this.velocity = reflection;
-            }
+            
+            reflection = plus(reflection, mult(energyCoefficient, refProj));
+            
+            this.velocity = reflection;
         }
         
-
+        
         
     }
     else {
@@ -590,103 +593,143 @@ function applyForces () {
 function limitForMovement(ball) {
     var limit;
     
-    var velocityNormS = normS(ball.velocity);
+    var normSVelocity = normS(ball.velocity);
     
+    
+    // Vetor que vai guardar apenas os obstáculos próximos
     var possibles = [];
     
-    var hits = [];
+    // Variável que guarda as informações da hitbox mais próxima
+    var result = null;
     
+    
+    // Acha os obstáculos próximos
     for (var i = 0; i < hitboxes.length; i++) {
+        
         var hitbox = hitboxes[i];
         var hitboxNormal = hitbox[4];
         
-        var v1 = minus(ball.position, hitbox[0]);
-        var limit = projection(v1, hitboxNormal);
+        // Pega a posição relativa da bola
+        var ballToHitbox = minus(ball.position, hitbox[0]);
+        // E a distância da bola ao obstáculo
+        var distance = projection(ballToHitbox, hitboxNormal);
         
-        if (normS(limit) < velocityNormS) {
+        // Se vamos andar mais do que a distância permitida
+        if (normS(distance) < normSVelocity && normS(distance) > 0) {
+            // Coloca este obstáculo no vetor
             possibles.push(i);
         }
     }
     
     
     
+    // Depois da filtração inicial, vamos ver se a bola vai atravessar uma hitbox ou não
     for (var i = 0; i < possibles.length; i++) {
+        // Peha as informações da hitbox atual
         var hitbox = hitboxes[possibles[i]];
-        
         var hitboxRectangle = [hitbox[0], hitbox[1], hitbox[2], hitbox[3]];
         var hitboxNormal = hitbox[4];
         var hitboxEnergy = hitbox[5];
         
-        var v1 = minus(ball.position, hitboxRectangle[0]);
-        var dot1;
+        
+        // Pega um vetor que levaria a bola à hitbox
+        var ballToHitbox = minus(ball.position, hitboxRectangle[0]);
+
         // Se estamos do lado certo da hitbox
-        if ((dot1 = vdot(v1, hitboxNormal)) > 0) {
-            var v2 = plus(ball.position, ball.velocity);
-            v2 = minus(v2, hitboxRectangle[0]);
+        if (vdot(ballToHitbox, hitboxNormal) > 0) {
+            // O quanto a bola passaria da hitbox (se atravessasse):
+            var movementRemainder = plus(ball.position    , ball.velocity);
+            movementRemainder =    minus(movementRemainder, hitboxRectangle[0]);
             
-            var dot2;
             
             // Se vamos passar do plano que contém a hitbox
-            if ((dot2 = vdot(v2, hitboxNormal)) < 0) {
+            if (vdot(movementRemainder, hitboxNormal) < 0) {
                 
-                var p1 = projection(v1, hitboxNormal);
-                var p2 = projection(v2, hitboxNormal);
+                // Projeta os dois vetores na direção normal ao plano
+                var ballToHitbox =      projection(ballToHitbox     , hitboxNormal);
+                var movementRemainder = projection(movementRemainder, hitboxNormal);
                 
-                var n1 = norm(p1);
-                var n2 = norm(p2);
+                // Pega o tamanho de cada um
+                var toHitboxNormal = norm(ballToHitbox);
+                var remainderNormal = norm(movementRemainder);
                 
-                n1 = n1/(n1+n2);
+                // Acha a proporção (o tamanho do vetor velocidade que está antes da hitbox,
+                // proporcional ao seu tamanho todo).
+                var ratio = toHitboxNormal/(toHitboxNormal+remainderNormal);
                 
-                var intersectionPoint = plus(ball.position, mult(n1, ball.velocity));
+                // A partir disso, semelhança de triângulos nos dá o ponto de intersecção do plano,
+                // com possíveis erros desprezíveis de float.
+                var intersectionPoint = plus(ball.position, mult(ratio, ball.velocity));
                 
-                var i1 = minus(intersectionPoint, hitboxRectangle[0]);
+                // Pega um vetor que leva de algum canto da hitbox ao ponto de intersecção
+                var intersection = minus(intersectionPoint, hitboxRectangle[0]);
                 
-                // Se estamos do lado certo do primeiro ponto
+                
+                // Pega o primeiro lado do retângulo
                 var d1 = minus(hitboxRectangle[1], hitboxRectangle[0]);
-                if (vdot(d1, i1) > 0) {
+                // O vetor de intersecção tem que fazer no máximo 90 graus com o 1o lado
+                if (vdot(d1, intersection) > 0) {
+                    
+                    // Se fizer, testamos o equivalente para o segundo lado
                     var d2 = minus(hitboxRectangle[3], hitboxRectangle[0]);
-                    if (vdot (d2, i1) > 0)  {
-                        // Se estamos do lado certo do terceiro ponto
+                    if (vdot (d2, intersection) > 0)  {
+                        
+                        // E para o terceiro
                         var d3 = minus(hitboxRectangle[1], hitboxRectangle[2]);
-                        if (vdot(d3, i1) < 0) {
+                        if (vdot(d3, intersection) < 0) {
+                            
+                            // E para o quarto
                             var d4 = minus(hitboxRectangle[3], hitboxRectangle[2]);
-                            if (vdot (d4, i1) < 0)  {
-                                limit = projection(v1, hitboxNormal);
-                                limit = mult(-1.0, limit);
-                                hits.push([possibles[i], limit]);
+                            if (vdot (d4, intersection) < 0)  {
+                                
+                                // Se tudo isso deu certo, estamos dentro do retângulo
+                                
+                                // Vamos ver se a hitbox que achamos está mais próxima de alguma outra ou não
+                                if (result != null) {
+                                    
+                                    // Pega a distância entre a bola e a hitbox (no sentido da velocidade)
+                                    var distance = minus(ball.position, intersectionPoint);
+                                    var n;
+                                    
+                                    // Se essa está mais perto
+                                    if ((n = normS(distance)) < result[2]) {
+                                        
+                                        // Pegamos a distância entre a bola e a hitbox (no sentido da normal da hitbox)
+                                        limit = projection(ballToHitbox, hitboxNormal);
+                                        limit = mult(-1.0, limit);
+                                        
+                                        // Coloca as informações dessa colisão no resultado
+                                        result = [possibles[i], limit, n];
+                                    }
+                                }
+                                // Se esse é o primeiro resultado achado
+                                else {
+                                    // Pegamos a distância entre a bola e a hitbox (no sentido da normal da hitbox)
+                                    limit = projection(ballToHitbox, hitboxNormal);
+                                    limit = mult(-1.0, limit);
+                                    
+                                    // Coloca as informações dessa colisão no resultado
+                                    result = [possibles[i], limit, normS(minus(ball.position, intersectionPoint))];
+                                }
+                                
+
                             }
                         }
-                        
                     }
                 }
                 
-                
-                
             }
         }
     }
-
     
-    if (hits.length == 0) {
+    
+    // Se não vamos bater em ninguém, não há o que retornar
+    if (result == null) {
         return null;
     }
-    else {
-        var min = 0;
-        var n = normS(hits[min][1]);
-        
-        for (var i = 1; i < hits.length; i++) {
-            if (normS(hits[i][1]) < n) {
-                min = i;
-                n = normS(hits[i][1]);
-            }
-        }
-    }
-    
-    var n = vec4(0.0, 1.0, 0.0, 0.0);
-    
-    var ret = [hits[min][1], hitboxes[hits[min][0]][4], hitboxes[hits[min][0]][5]];
-    
-    return ret;
+
+    // Caso contrário, organizamos as informações e retornamos
+    return [result[1], hitboxes[result[0]][4], hitboxes[result[0]][5]];
 }
 
 
@@ -726,7 +769,7 @@ function updateModelViewMatrix() {
 /* MATRIZES DE PROJEÇÃO */
 // Cria e seta a matriz de perspectiva
 function updatePerspective() {
-//    projec = perspective(60, canvas.width/canvas.height, 2.0, 0.0001);
+    //    projec = perspective(60, canvas.width/canvas.height, 2.0, 0.0001);
     var orthoZoom = 0.5;
     projec = ortho(orthoZoom  * -canvas.width/canvas.height, orthoZoom  * canvas.width/canvas.height, orthoZoom  * -1, orthoZoom  * 1, orthoZoom  * -4.1, orthoZoom  * -0.1);
 }
@@ -895,12 +938,12 @@ function render() {
     
     // Limpa a tela
     gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
+    
     
     // Para cada bola
     for (i = 0; i < objects.length; i++) {
         objects[i].applyForces();
-//        console.log(objects[i].forces, objects[i].position, objects[i].velocity);
+        //        console.log(objects[i].forces, objects[i].position, objects[i].velocity);
     }
     
     
@@ -916,9 +959,9 @@ function render() {
         // Desenha o objeto atual
         gl.drawArrays( gl.TRIANGLES, 0, points.length);
     }
-
     
-
+    
+    
     
     
     requestAnimFrame(render);
