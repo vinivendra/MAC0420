@@ -150,13 +150,13 @@ window.onload = function init()
     
     
     // Lê os *.obj
-    objNames = ['torre.obj',
-                'cavalo.obj',
-                'bispo.obj',
-                'rei.obj',
-                'rainha.obj',
-                'peao.obj',];
-    readObj('Tabuleiro.obj');
+    objNames = ['resources/rook.obj',
+                'resources/knight.obj',
+                'resources/bishop.obj',
+                'resources/king.obj',
+                'resources/queen.obj',
+                'resources/pawn.obj',];
+    readObj('resources/board.obj');
 }
 
 
